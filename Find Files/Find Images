@@ -1,21 +1,19 @@
 #!/bin/bash
 #Find Images Here
+#script to find images by file magic and create symlinks in one directory
 #by John Lehr (c) 2009
 
-TITLE="Show Images"
 TEMP_DIR=$(mktemp -d)
-SEARCH_DIR=$(pwd)
-
-cd $TEMP_DIR 
 nautilus $TEMP_DIR;
 
-find "$SEARCH_DIR" -type f | \
-	while read FILENAME; do
-		IMAGE=$(file -bi "$FILENAME" | grep image)
+find "$(pwd)" -type f | tee \
+	>(sleep 3; zenity --progress --title="Find Images" --text="Searching..." --pulsate  --auto-close --auto-kill) \
+	>(while read FILENAME; do
+		IMAGE="$(file -bi "$FILENAME" | grep image)"
 		if [ "$IMAGE" != "" ]; then
-			NEW_FILENAME=$(echo "$FILENAME" | tr '/' '_')
-			ln -s -T "$FILENAME" "$NEW_FILENAME"
+			NEW_FILENAME="$(echo "$FILENAME" | sed's/\//^/g')"
+			ln -s -T "$FILENAME" "$TEMP_DIR/$NEW_FILENAME"
 		fi
-	done
+	done)
 		
 exit 0

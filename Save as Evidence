@@ -1,21 +1,23 @@
 #!/bin/bash
-# mark_as_evidence.sh
+# Save as Evidence.sh
 # script to add a file to an evidence list with optional comment
+# by John Lehr (c) 2009
 
-TITLE="Mark File as Evidence"
+TITLE="Save as Evidence"
 
 mkdir $HOME/Desktop/Evidence
 
 # obtain user comment
 COMMENT=$(zenity --entry \
 	--title "$TITLE" \
-	--text "Investigator's note (optional, cancel quits):" \
+	--text "Investigator's note (optional, \"Cancel\" quits):" \
 	--width=500)
 
 # gather data for evidence report
-for FILENAME in "$@"; do
-		
-		NEW_FILENAME="$(echo $FILENAME | tr "/" "_")"
+echo "$NAUTILUS_SCRIPT_SELECTED_URIS" | \
+	while read URI; do
+		FILENAME="$(echo $URI | sed 's/file:\/\///' | sed 's/\%20/ /g')"		
+		NEW_FILENAME="$(echo $FILENAME | sed 's/\//^/g')"
 		
 		FILE_STAT="$(stat -L "$FILENAME")" 
 		MD5="$(md5sum "$FILENAME" | cut -d " " -f1)" 
@@ -24,8 +26,6 @@ for FILENAME in "$@"; do
 		echo -e "$FILE_STAT\n\nFile Type: $FILE_TYPE\n\nMD5 HASH: $MD5\n\nInvestigator's Note: $COMMENT" > "$HOME/Desktop/Evidence/$NEW_FILENAME.evid.txt"
 		
 		cp "$FILENAME" "$HOME/Desktop/Evidence/$NEW_FILENAME"
-done
-
-nautilus $HOME/Desktop/Evidence
+	done
 
 exit 0
