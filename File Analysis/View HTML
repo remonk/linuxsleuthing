@@ -1,0 +1,5 @@
+#!/bin/bash
+#View HTML
+#by John Lehr (c) 2009
+
+links2 -g $@

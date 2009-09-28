@@ -1,0 +1,22 @@
+#!/bin/bash
+#View MDB Database
+#by J. Lehr (c) 2009
+
+TEMP_FILE=$(mktemp)
+
+DB_TABLES=$(mdb-tables "$@" | sed  's/ /, /g')
+TABLE=$(zenity --entry --text="Choose Table: $DB_TABLES")
+
+if [ "$?" = "1" ]; then exit 0; fi
+
+echo "$NAUTILUS_SCRIPT_SELECTED_URIS" | while read URI ; do
+	FILE="$(echo "$URI" | sed 's/file:\/\///' | sed 's/%20/ /g')"
+	zenity --info --text="$FILE"
+	echo "$FILE"
+	mdb-export "$FILE" "$TABLE"
+	echo ""
+done > $TEMP_FILE.csv
+
+openoffice.org $TEMP_FILE.csv
+
+rm $TEMP_FILE.csv
