@@ -11,7 +11,7 @@ find "$(pwd)" -type f | tee \
 	>(while read FILENAME; do
 		IMAGE="$(file -bi "$FILENAME" | grep image)"
 		if [ "$IMAGE" != "" ]; then
-			NEW_FILENAME="$(echo "$FILENAME" | sed's/\//^/g')"
+			NEW_FILENAME="$(echo "$FILENAME" | sed 's/\//^/g')"
 			ln -s -T "$FILENAME" "$TEMP_DIR/$NEW_FILENAME"
 		fi
 	done)

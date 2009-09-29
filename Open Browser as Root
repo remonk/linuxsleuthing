@@ -1,3 +1,5 @@
 #!/bin/bash
+#Open Browser as Root
 
-script-worker browse $NAUTILUS_SCRIPT_SELECTED_URIS root
+gksu nautilus $(pwd)
+
