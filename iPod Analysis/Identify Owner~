@@ -1,5 +1,0 @@
-#!/bin/bash
-#iPod_ID.sh
-#by John Lehr (c) 2009
-
-gksu /usr/local/bin/iPod_ID.sh

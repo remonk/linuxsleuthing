@@ -3,17 +3,24 @@
 #script to find images by file magic and create symlinks in one directory
 #by John Lehr (c) 2009
 
-TEMP_DIR=$(mktemp -d)
-nautilus $TEMP_DIR;
+# create temp dir with source dir name
+TEMP_DIR=$(mktemp -d /tmp/"$(basename $(pwd))"_images)
 
+# find images in pwd, create links in temp dir, show progress
 find "$(pwd)" -type f | tee \
 	>(sleep 3; zenity --progress --title="Find Images" --text="Searching..." --pulsate  --auto-close --auto-kill) \
 	>(while read FILENAME; do
 		IMAGE="$(file -bi "$FILENAME" | grep image)"
 		if [ "$IMAGE" != "" ]; then
-			NEW_FILENAME="$(echo "$FILENAME" | sed 's/\//^/g')"
+			NEW_FILENAME="$(basename "$FILENAME")-$(stat -L -c %i "$FILENAME")"
 			ln -s -T "$FILENAME" "$TEMP_DIR/$NEW_FILENAME"
 		fi
 	done)
-		
+
+# open temp dir
+nautilus "$TEMP_DIR"
+
+# need to establish way to remove dir when nautilus window closed, probably by pid
+# rm -rf "$TEMP_DIR"
+
 exit 0
