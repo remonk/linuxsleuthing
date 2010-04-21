@@ -2,4 +2,4 @@
 # View in Hexeditor
 # by John Lehr (c) 2009
 
-ghex2 $@
+gnome-terminal -x hd -C "$@"

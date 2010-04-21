@@ -2,4 +2,4 @@
 #View HTML
 #by John Lehr (c) 2009
 
-links2 -g $@
+links2 -g "$@"
