@@ -1,0 +1,29 @@
+#!/bin/bash
+#Make Device Writable
+#by John Lehr (c) 2009
+
+MOUNT_POINT="$(pwd | cut -d "/" -f1-3)"
+DEVICE="$(echo $MOUNT_POINT | sed 's/media/dev/')"
+
+zenity --question --text="Do you want to make \"$MOUNT_POINT\" writeable?"
+
+if [ $? = 1 ]; then
+	exit 0
+fi
+
+RESPONSE="$(zenity --warning --text="This could alter evidence if the wrong device has been selected!  Continue?")"
+	
+if [ "$RESPONSE" = 1 ]; then
+	echo --warning --text="Operation cancelled by user."
+	exit 0
+fi
+	
+if [ "$(mount | grep $MOUNT_POINT | grep rw)" != "" ]; then
+	--zenity --info --text="You can already write to this device."
+	exit 1
+fi
+PERMISSION=`gksudo -u root -k -m "Enter your password for root access" /bin/echo "got r00t?"`	
+WRITEABLE="$(sudo mount -v -o remount,rw,user "$DEVICE" "$MOUNT_POINT")"
+zenity --info --text="Mount: $WRITEABLE \n\nInfo: \"rw\" indicates \"read/write\" access"
+
+exit 0

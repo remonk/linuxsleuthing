@@ -1,0 +1,42 @@
+#!/bin/bash
+# Show Table Contents
+# by John Lehr (c) 2009
+
+# variables
+TITLE="Show Contents"
+
+# query for table name
+TEXT=$(echo -e "Available Tables:\n\n$(sqlite3 "$@" ".table" | tr -s ' ' '\n')\n\nEnter table to view:")
+SELECTION=$(zenity --entry \
+	--title "$TITLE" \
+	--text "$TEXT")
+	
+# output table contents
+OUTPUT=$(sqlite3 "$@" "select * from "$SELECTION"")
+echo "$OUTPUT" | \
+	zenity --text-info \
+		--title "$TITLE" \
+		--width=640 \
+		--height=480
+
+# search option
+zenity --question \
+	--title $TITLE \
+	--text "Do you want to search this output?" \
+	--ok-label="Yes" \
+	--cancel-label="No"
+	
+if [ "$?" = "1" ]; then
+	exit 0
+fi
+
+TERM=$(zenity --entry \
+	--title "$TITLE" \
+	--text "Enter search term:")
+echo -e "$OUTPUT" | grep -Ei "$TERM" | \
+	zenity --text-info \
+		--title "$TITLE" \
+		--width=640 \
+		--height=480
+		
+exit 0

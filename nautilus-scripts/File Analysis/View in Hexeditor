@@ -1,0 +1,5 @@
+#!/bin/bash
+# View in Hexeditor
+# by John Lehr (c) 2009
+
+gnome-terminal -x hd -C "$@"

@@ -1,0 +1,11 @@
+#!/bin/bash
+# Show File Details
+# by John Lehr (c) 2009
+
+TITLE="File Details"
+
+stat "$@" | \
+	zenity --text-info \
+		--title "File Details" \
+		--width=640 \
+		--height=480
