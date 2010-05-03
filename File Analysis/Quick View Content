@@ -1,5 +1,0 @@
-#!/bin/bash
-#Quick View
-#by John Lehr (c) 2009
-
-gnome-terminal -x most "$@"
