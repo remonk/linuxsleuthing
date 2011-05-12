@@ -1,5 +1,0 @@
-#!/bin/bash
-# Open Terminal Here
-# by John Lehr (c) 2009
-
-gnome-terminal $(pwd) #$NAUTILUS_SCRIPT_CURRENT_URI

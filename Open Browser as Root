@@ -1,5 +1,0 @@
-#!/bin/bash
-#Open Browser as Root
-
-gksu nautilus "$(pwd)"
-
