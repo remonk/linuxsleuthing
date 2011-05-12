@@ -1,0 +1,182 @@
+#!/bin/bash
+#: Title 	: iphone_cs
+#: Author	: "John Lehr" <slo.sleuth@gmail.com>
+#: Date		: 05/04/2011
+#: Version	: 1.0.2
+#: Description	: Dump/interpret iphone consolidated.db messages table 
+#: Options	: None
+
+#: 05/04/2011 : v1.0.2 added dependency checking
+#: 04/12/2011 : v1.0.1 mapping support added for gpsvisualizer.com
+#: 04/11/2011 : v1.0.0 Initial Release
+
+#: TO DO
+#: add arguments to change sqlite output type (list,line,html,csv)
+#: add arguments to sort on different columns
+
+## Variables
+progname="${0##*/}"
+deps=sqlite3
+cell=0
+local=0
+wifi=0
+csv=0
+html=0
+line=0
+raw=0
+map=0
+
+## Functions
+
+usage()
+{
+	echo "USAGE: $progname [-chlmw] file"
+	echo "       where 'file' is an iPhone consolidated.db"
+	cat << EOF
+	
+Options (only one option may be used at a time):
+	-c	output to csv (default is sqlite list format)
+	-C	Parse CellLocation table
+	-h	print this help
+	-H	output to html
+	-l	output each one field per line
+	-L	Parse CellLocationLocal table
+	-m	mapping format (csv)
+	-r	raw
+	-W 	Parse WifiLocation table
+	-V	carrier is Verizon (CDMA)
+
+Options MUST preceed the database to be processed. 
+
+Information: $progname reads the 'consolidated.db' iphone database
+and dumps the timestamp, latitude and longitude information from the
+CellLocation table to standard output.  Optionally, the WifiLocation
+table can be dumped.
+
+EOF
+}
+
+celllocation()
+{
+	## export CellLocation table to stdout
+	if [ $map = 1 ]; then
+		sqlite3 -header -csv $db "SELECT datetime(Timestamp + 978307200, 'unixepoch', 'localtime') AS 'name', Latitude, Longitude from ${verizon}CellLocation WHERE Latitude != 0.0"
+		notice
+	elif [ $raw = 1 ]; then
+		sqlite3 -header $format $db "SELECT * FROM ${verizon}CellLocation"
+	else
+		sqlite3 -header $format $db "SELECT datetime(Timestamp + 978307200, 'unixepoch', 'localtime') AS 'Time Stamp', Latitude, Longitude from ${verizon}CellLocation"
+	fi
+}
+
+celllocationlocal()
+{
+	## export CellLocationLocal table to stdout
+	if [ $map = 1 ]; then
+		sqlite3 -header -csv $db "SELECT datetime(Timestamp + 978307200, 'unixepoch', 'localtime') AS 'name', 'Speed: ' || round(Speed, 1) || ' at ' || round(Course, 1) || ' Degrees' as Desc, Latitude, Longitude from ${verizon}CellLocationLocal"
+		notice
+	elif [ $raw = 1 ]; then
+		sqlite3 -header $format $db "SELECT * FROM ${verizon}CellLocationLocal"
+	else
+		sqlite3 -header $format $db "SELECT datetime(Timestamp + 978307200, 'unixepoch', 'localtime') AS 'Time Stamp', Latitude, Longitude, rtrim(round(Speed),'.0') as Speed, rtrim(round(Course),'.0') as Direction from ${verizon}CellLocationLocal"
+	fi
+}
+
+check_deps ()
+{
+	for i in $deps; do
+		which $i >/dev/null
+		if [ $? -gt 0 ]; then
+			echo "Error: $i is not installed or is not in the path"
+		fi
+	done
+}
+
+notice ()
+{
+	echo -e "Open output file in mapping program or upload to http://www.gpsvisualizer.com/" >&2
+}
+
+wifilocation()
+{
+	## export WifiLocation table to stdout
+	if [ $map = 1 ]; then
+		sqlite3 -header -csv $db "SELECT datetime(Timestamp + 978307200, 'unixepoch', 'localtime') AS 'Name', 'MAC Address: ' || MAC as Desc, Latitude, Longitude from WifiLocation where Latitude != 0.0"
+		notice
+	elif [ $raw = 1 ]; then
+		sqlite3 -header $format $db "SELECT * FROM WifiLocation"
+	else
+		sqlite3 -header $format $db "SELECT datetime(Timestamp + 978307200, 'unixepoch', 'localtime') AS 'Time Stamp', Latitude, Longitude, MAC from WifiLocation"
+	fi
+}
+
+wifilocationharvest()
+{
+	## export WifiLocation table to stdout
+	if [ $map = 1 ]; then
+		sqlite3 -header -csv $db "SELECT datetime(Timestamp + 978307200, 'unixepoch', 'localtime') AS 'Name', 'MAC Address: ' || MAC as Desc, Latitude, Longitude from WifiLocationHarvest"
+		notice
+	else
+		sqlite3 -header $format $db "SELECT datetime(Timestamp + 978307200, 'unixepoch', 'localtime') AS 'Time Stamp', Latitude, Longitude, MAC from WifiLocationHarvest"
+	fi
+}
+
+## list of options program will accept;
+## options followed by a colon take arguments
+optstring=cChHlLmWrV
+
+## The loop calls getops until there are no more options on the command 
+## line.  Each option is stored in $opt, any option arguments are stored
+## in OPTARG
+while getopts $optstring opt; do
+	case $opt in
+		c) csv=1; format=-csv ;;
+		C) cell=1 ;;
+		h) usage >&2; exit 0 ;;
+		H) html=1; format=-html ;;
+		l) line=1; format=-line ;;
+		L) local=1 ;;
+		m) map=1 ;;
+		r) raw=1 ;;
+		W) wifi=1 ;;
+		V) verizon=CDMA ;;
+		*) echo; usage >&2; exit 1 ;;
+	esac
+done
+
+## Remove options from the command line
+## $OPTIND points to the next, unparsed argument
+shift "$(( $OPTIND -1 ))"
+db="$1"
+
+## Check database is an iphone "consolidated.db"
+tables=$(sqlite3 $1 .tables)
+if ! [[ $tables =~ CellLocation && $tables =~ Wifi && $tables =~ TableInfo ]]; then
+	echo -e "ERROR: Not an iPhone 'consolidated.db'\n"
+	usage
+	exit 1
+fi
+
+## Check for conflicting arguments
+if [ $(($cell+$local+$wifi)) -gt 1 ]; then
+	echo -e "Error: only one table may be selected\n" >&2; usage >&2; exit 1
+elif [ $(($cell+$local+$wifi)) -lt 1 ]; then
+	echo -e "Error: a table must be selected\n" >&2; usage >&2; exit 1
+fi
+
+if [ $(($csv+$html+$line)) -gt 1 ]; then
+	echo "Error: arguments -c -H -l and -L may not be used together" >&2
+	exit 1
+fi
+
+
+## Process file according to chosen option
+if [ $cell = 1 ]; then
+	celllocation
+elif [ $local = 1 ]; then
+	celllocationlocal
+else
+	wifilocation
+fi
+
+exit 0

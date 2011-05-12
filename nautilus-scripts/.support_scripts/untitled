@@ -1,0 +1,21 @@
+#!/bin/bash
+#: Title 		: previewer-functions
+#: Author		: "John Lehr" <slo.sleuth@gmail.com>
+#: Date			: 05/04/2011
+#: Version		: 1.0.0
+#: Description	: functions to suppor the Previewer nautilus scripts
+#: Options		: None
+
+## Variables
+dialog=$(which yad)
+save_dir=$([[ -e $HOME/.save_dir |)
+file_dims="--width=600 --height=400"
+
+choose_save_directory ()
+{
+	if [ -z $save_dir ]; then
+		$dialog --file --directory $file_dims $file_dims
+	else
+		$dialog --file --directory --filename="$save_dir" $file_dims $file_dims
+	fi
+}	

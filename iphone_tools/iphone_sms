@@ -1,0 +1,104 @@
+#!/bin/bash
+#: Title 	: iphone_sms
+#: Author	: "John Lehr" <slo.sleuth@gmail.com>
+#: Date		: 05/04/2011
+#: Version	: 1.0.2
+#: Description	: Dump/interpret iphone sms.db messages table 
+#: Options	: None
+
+#: 05/04/2011 : v1.0.2 added extended output formats, updated code schema
+#: 04/12/2011 : v1.0.1 updated flags translations
+#: 03/22/2011 : v1.0.0 Initial Release
+
+#: TO DO
+#: add arguments to sort on different columns
+
+## Variables
+progname=${0##*/}
+deps=sqlite3
+csv=0
+html=0
+line=0
+list=0
+raw=0
+
+## Functions
+
+usage()
+{
+	echo "USAGE: $progname [-h] sms.db"
+
+	cat << EOF
+	
+Options (-r may be combined with output option):
+	-c	output to csv (default is sqlite list format)
+	-h	print this help
+	-H	output to html
+	-l	output one field per line
+	-r	raw message table dump (flags are not interpreted)
+
+Options MUST preceed the file to be processed. 
+
+Information: $progname dumps the iPhone sms.db file contents to standard
+output.  It interprets the flags to make reading the output easier.
+
+EOF
+}
+
+check_deps ()
+{
+	for i in $deps; do
+		which $i >/dev/null
+		if [ $? -gt 0 ]; then
+			echo "Error: $i is not installed or is not in the path"
+		fi
+	done
+}
+
+## Check for installed dependencies
+check_deps
+
+## list of options program will accept;
+## options followed by a colon take arguments
+optstring=chHlr
+
+## The loop calls getops until there are no more options on the command 
+## line.  Each option is stored in $opt, any option arguments are stored
+## in OPTARG
+while getopts $optstring opt; do
+	case $opt in
+		c) csv=1; format=-csv ;;
+		h) usage >&2; exit 0 ;;
+		H) html=1; format=-html ;;
+		l) line=1; format=-line ;;
+		r) raw=1 ;;
+		*) echo; usage >&2; exit 1 ;;
+	esac
+done
+
+## Remove options from the command line
+## $OPTIND points to the next, unparsed argument
+shift "$(( $OPTIND -1 ))"
+
+## Check for conflicting arguments
+if [ $(($csv+$html+$line)) -gt 1 ]; then
+	echo "Error: arguments -c -H and -l may not be used together" >&2
+	exit 1
+fi
+
+## Check database is an iphone "sms.db"
+tables=$(sqlite3 $1 .tables)
+if ! [[ $tables =~ message && $tables =~ msg_ && $tables =~ group_ && $tables =~ _Sqlite ]]; then
+	echo -e "ERROR: Not an iPhone 'sms.db'\n"
+	usage
+	exit 1
+fi
+
+#export call table to stdout
+if [ $raw = 1 ]; then
+	sqlite3 -header $format $1 "select * from message"
+else
+	sqlite3 -header $format $1 "select datetime(date,'unixepoch','localtime') as date, case flags when 2 then 'Received SMS' when 3 then 'Sent SMS/MMS' when 4 then 'Received MMS' when 33 then 'Unsent SMS/MMS' when 35 then 'Failed Send' when 129 then 'Deleted' else 'Unknown' end as 'Type(from Flags)', address as 'Phone #' , text as Message, flags as Flags from message"
+fi
+
+exit 0

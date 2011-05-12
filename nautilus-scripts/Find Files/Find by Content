@@ -2,4 +2,4 @@
 #Find by Content
 #by John Lehr (c) 2009
 
-gnome-search-tool --contains="" "$(pwd)"
+gnome-search-tool --contains="" --path="$(pwd)"

@@ -1,0 +1,108 @@
+#!/bin/bash
+#: Title		: Make Device Writeable
+#: Date			: 2010-06-28
+#: Author		: "John Lehr" <slo.sleuth@gmail.com>
+#: Version		: 1.1
+#: Description	: Remounts device in read-write mode.
+
+
+## Change log
+
+# v1.1
+# 	- 	improved mount point detection to find mount points anywhere in the file
+#	  	system
+#	- 	fixed GUI cancel option
+
+
+## Script-wide Variables
+title="Make Device Writeable" # Set window title
+icon=/usr/share/icons/gnome-colors-common/16x16/actions/gtk-edit.png
+
+
+## Functions
+
+# Determine mount point and device node of current working directory
+determine_mountpoint ()
+{
+	mpoint="$PWD"
+
+	while ! mountpoint -q "$mpoint"
+	do
+		mpoint="$(dirname "$mpoint")"
+	done
+
+	device_node="$(mount | grep "$mpoint" |sed -e 's/ on /\t/' -e 's/ /\\ /g'| cut -f1)"
+	export mpoint device_node
+}
+
+# Show mount options in use
+read_mount_options ()
+{
+	moptions="$(mount | grep "$mpoint")"
+	export moptions
+}
+
+# Determine if user cancelled operation
+check_for_cancel ()
+{
+	if [ $? = 1 ]
+	then
+		zenity --info \
+			--title=$title \
+			--window-icon=$icon \
+			--text="Operation cancelled by user. \n\nDevice mount options unchanged: \n$moptions"
+		exit 1
+	fi
+}
+
+
+## Main script
+
+determine_mountpoint
+read_mount_options
+
+# Ensure operation is intended
+zenity --question \
+	--title="$title" \
+	--window-icon="$icon" \
+	--text="Do you want to make \"$mpoint\" writeable? \n\nCurrent status: $moptions" 
+check_for_cancel
+
+# Check to see if device is already writeable	
+if [ -n "$(mount | grep $mpoint | grep rw)" ]
+then
+	zenity --info \
+		--title=$title \
+		--window-icon="$icon" \
+		--text="You can already write to \"$mpoint.\" \nNo action taken."
+	exit 1
+fi
+
+# Warn before continuing
+zenity --question \
+	--title="$title" \
+	--window-icon="$icon" \
+	--text="This could alter evidence if the wrong \ndevice has been selected! \n\n\Are you certain you want to make \n\"$mpoint\" writeable?"
+check_for_cancel
+
+
+# Remount the device read-write and report results
+gksu -k -m "Enter your password for administrative access" /bin/echo
+sudo mount -v -o remount,rw,user "$device_node" "$mpoint"
+read_mount_options
+
+# Report success
+if [ -n "$(mount | grep $mpoint | grep rw)" ]
+then
+	zenity --info \
+		--title="$title" \
+		--window-icon="$icon" \
+		--text="Success! \n\n\"$mpoint\" is now writeable: \n$moptions"
+else
+	zenity --error \
+		--title="$title" \
+		--window-icon="$icon" \
+		--text="Error changing device status. \n\nTry again or change settings manually."
+fi
+
+exit 0

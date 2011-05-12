@@ -1,5 +1,10 @@
 #!/bin/bash
-# View in Hexeditor
-# by John Lehr (c) 2009
+#: Title		: View in Hexeditor
+#: Date			: 2010-05-11
+#: Author		: "John Lehr" <slo.sleuth@gmail.com>
+#: Version		: 1.0
+#: Description	: Opens selected files in ghex, adapted for paths with spaces
 
-gnome-terminal -x hd -C "$@"
+ghex2 "$@"
+
+exit 0
