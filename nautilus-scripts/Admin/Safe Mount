@@ -1,0 +1,89 @@
+#!/bin/bash
+#: Title		: Safe Mount
+#: Date			: 05/12/2011
+#: Author		: "John Lehr" <slo.sleuth@gmail.com>
+#: Version		: 0.1.0
+#: Description	: simplified mounting script for forensic analysis
+
+#: 05/12/11		: gui framework established
+
+## To do:
+#- Determine way to map nautilus device URI to device node so script can be
+#- used in nautilus "Computer" window.
+
+## Variables
+TITLE="Safe Mount"
+IMAGE="gtk-harddisk"
+
+## Functions
+check_mount ()
+{
+	if [ $? = 0 ]; then
+		mount_success
+		exit 0
+	else
+		mount_fail
+		exit 1
+	fi
+}
+
+mount_success ()
+{
+	yad --title="$TITLE" \
+		--image=gtk-ok \
+		--dialog-sep \
+		--text="\nDevice successfully mounted read-only." \
+		--button=gtk-ok
+}
+
+mount_fail ()
+{
+	yad --title="$TITLE" \
+		--image=gtk-dialog-error \
+		--dialog-sep \
+		--text="\nDevice failed to mount.\nTry again, or mount manually." \
+		--button=gtk-ok
+}
+
+test_operation ()
+{
+	yad --title="$TITLE" \
+		--image=gtk-dialog-question \
+		--dialog-sep \
+		--text="\nThis is a test box to check UI logic.\nChoose if operation result."\
+		--button="Successful":0 \
+		--button="Failure":1
+}
+	
+write_warning ()
+{
+	yad --title="$TITLE" \
+		--image=gtk-dialog-warning \
+		--dialog-sep \
+		--text="This operation will allow writing to the device\nand potentially destroy data.\n\nDo you want to continue?" \
+		--button=gtk-no:1 \
+		--button=gtk-yes:0
+
+	[[ $? = 1 ]] && exit 0
+}
+
+## Main application
+MOUNT_OPTION="$(yad --form \
+	--title="$TITLE" \
+	--dialog-sep \
+	--image=$IMAGE \
+	--field="Mount Option:":CB \
+	'SAFE Mount (Read-Only)!Make Writeable (Read-Write)')"
+
+[[ $? = 1 ]] && exit 0
+
+case $MOUNT_OPTION in
+
+	SAFE*) test_operation #mount command here
+		check_mount ;;
+
+	Make*) write_warning
+		test_operation #mount command here
+		check_mount ;;
+
+esac
