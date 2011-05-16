@@ -1,10 +1,11 @@
 #!/bin/bash
 #: Title		: Safe Mount
-#: Date			: 05/12/2011
+#: Date			: 05/15/2011
 #: Author		: "John Lehr" <slo.sleuth@gmail.com>
-#: Version		: 1.0.0
+#: Version		: 1.0.1
 #: Description	: simplified mounting script for forensic analysis
 
+#: 05/15/2011 : v1.0.1 Bug fix, print_deviceinfo made Ubuntu compatible
 #: 05/13/2011	: v1.0.0 First release
 #: 05/12/2011	: v0.1.0 gui framework established
 
@@ -78,10 +79,11 @@ mount_fail ()
 print_deviceinfo ()
 {
 	DEVICEINFO=$(sudo blkid -o list)
-	yad --title="$TITLE" \
+	sudo fdisk -lu | yad --text-info --title="$TITLE" \
 		--image=gtk-dialog-info \
 		--dialog-sep \
-		--text="<tt>$DEVICEINFO</tt>" \
+		--text="<tt>${DEVICEINFO//<swap>/swap  }</tt>\n\nAddtional Disk Information:" \
+		--height=400 \
 		--button=gtk-ok
 }
 
@@ -120,7 +122,7 @@ for VAR in DEVICE_NODE WRITE_OPTION; do
 	MOUNT_OPTIONS="${MOUNT_OPTIONS#*|}"
 done
 
-if [ $WRITE_OPTION = FALSE ]; then
+if [ $WRITE_OPTION = TRUE ]; then
 	WRITE_TYPE=read-write
 else
 	WRITE_TYPE=read-only
