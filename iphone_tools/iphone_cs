@@ -1,17 +1,17 @@
 #!/bin/bash
 #: Title 	: iphone_cs
 #: Author	: "John Lehr" <slo.sleuth@gmail.com>
-#: Date		: 05/04/2011
+#: Date		: 07/25/2011
 #: Version	: 1.0.2
 #: Description	: Dump/interpret iphone consolidated.db messages table 
 #: Options	: None
 
+#: 07/25/2011 : v1.0.3 
 #: 05/04/2011 : v1.0.2 added dependency checking
 #: 04/12/2011 : v1.0.1 mapping support added for gpsvisualizer.com
 #: 04/11/2011 : v1.0.0 Initial Release
 
 #: TO DO
-#: add arguments to change sqlite output type (list,line,html,csv)
 #: add arguments to sort on different columns
 
 ## Variables
@@ -34,16 +34,21 @@ usage()
 	echo "       where 'file' is an iPhone consolidated.db"
 	cat << EOF
 	
-Options (only one option may be used at a time):
-	-c	output to csv (default is sqlite list format)
+Options (only one table option may be used at a time):
+
+	Table options:
 	-C	Parse CellLocation table
-	-h	print this help
+	-L	Parse CellLocationLocal table
+	-W 	Parse WifiLocation table
+	
+	Formatting options:
+	-c	output to csv (default is sqlite list format)
 	-H	output to html
 	-l	output each one field per line
-	-L	Parse CellLocationLocal table
 	-m	mapping format (csv)
-	-r	raw
-	-W 	Parse WifiLocation table
+	-r	raw (dump the full table, no conversion)
+
+	Other:
 	-V	carrier is Verizon (CDMA)
 
 Options MUST preceed the database to be processed. 

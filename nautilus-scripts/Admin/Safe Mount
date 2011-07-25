@@ -5,7 +5,7 @@
 #: Version		: 1.0.1
 #: Description	: simplified mounting script for forensic analysis
 
-#: 05/15/2011 : v1.0.1 Bug fix, print_deviceinfo made Ubuntu compatible
+#: 05/15/2011	: v1.0.1 Bug fix, print_deviceinfo made Ubuntu compatible
 #: 05/13/2011	: v1.0.0 First release
 #: 05/12/2011	: v0.1.0 gui framework established
 
@@ -102,7 +102,7 @@ write_warning ()
 ## Main application
 MESSAGE="Operation requires administrative privileges.
 Enter root password to continue:"
-gksudo -m "$MESSAGE" "echo -n"
+gksudo -m "$MESSAGE" echo >/dev/null
 
 DEVICES=$(sudo blkid -o device)
 
