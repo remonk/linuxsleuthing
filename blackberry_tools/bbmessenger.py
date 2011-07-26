@@ -22,7 +22,6 @@ def main(csv):
                 datecode, sender, receiver, message = line.split(',', 3)
                 date = int(datecode[8:18])
                 date = strftime('%Y-%m-%d %H:%M:%S (%Z)', localtime(date))
-                message = message[0:-1]
                 print('"{}",{},"{}","{}","{}"'.format(date, datecode, sender, receiver, message.strip()))
 
 if __name__ == '__main__':
