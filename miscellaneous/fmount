@@ -63,7 +63,8 @@ mount_volumes()
         tskfuse.py -o ro,allow_other,offset=$((OFFSET*512)) "$IMAGE" "$MNTPNT"
         TOOL=\"tskfuse.py\"
     else
-        mount -o ro,loop,user,offset=$(($OFFSET*512)),show_sys_files,streams_interface=windows "$IMAGE" "$MNTPNT"
+        [[ "$(fsstat -o $OFFSET $IMAGE | head -3)" =~ NTFS ]] && ntfs_opts=",show_sys_files,streams_interface=windows"
+        mount -o ro,loop,user,offset=$(($OFFSET*512))$ntfs_opts "$IMAGE" "$MNTPNT"
         TOOL=\"mount\"
     fi
 }
