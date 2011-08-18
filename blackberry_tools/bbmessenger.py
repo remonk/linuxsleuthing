@@ -24,7 +24,7 @@ def print_records(csv):
                 datecode, sender, receiver, message = line.split(',', 3)
                 date = int(datecode[8:18])
                 date = strftime('%Y-%m-%d %H:%M:%S (%Z)', localtime(date))
-                print('"{}",{},"{}","{}","{!r}"'.format(date, datecode, sender, receiver, message.strip()))
+                print('"{}",{},{},{},"{}"'.format(date, datecode, sender, receiver, message.strip()))
 
 if __name__ == '__main__':
     for file in sys.argv[1:]:
