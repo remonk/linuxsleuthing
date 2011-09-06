@@ -41,7 +41,7 @@ get_image_type()
 
 mount_split_image()
 {
-    if [ ${#IMAGE[@]} -gt 1 ]
+    if [ ${#IMAGE[@]} -gt 1 ] || [ "$ITYPE" = "ewf" ]
     then
         MNTPNT="/mnt/$DIR_NAME"
         echo "$ITYPE split image detected consisting of ${#IMAGE[@]} segments" >&2
@@ -60,11 +60,11 @@ mount_volumes()
     which tskfuse.py >/dev/null
     if [ $? -eq 0 ] && [ $MOUNTER -eq 1 ] 
     then
-        tskfuse.py -o ro,allow_other,offset=$((OFFSET*512)) "$IMAGE" "$MNTPNT"
+        tskfuse.py -o ro,allow_other,offset=$(($OFFSET*512)) "$IMAGE" "$MNTPNT"
         TOOL=\"tskfuse.py\"
     else
-        [[ "$(fsstat -o $OFFSET $IMAGE | head -3)" =~ NTFS ]] && ntfs_opts=",show_sys_files,streams_interface=windows"
-        mount -o ro,loop,user,offset=$(($OFFSET*512))$ntfs_opts "$IMAGE" "$MNTPNT"
+        [[ "$(fsstat -o $OFFSET $IMAGE | head -3)" =~ NTFS ]] && NTFS_OPTS=",show_sys_files,streams_interface=windows"
+        mount -o ro,loop,offset=$(($OFFSET*512)),user$NTFS_OPTS "$IMAGE" "$MNTPNT"
         TOOL=\"mount\"
     fi
 }
@@ -132,31 +132,43 @@ then
 else
     get_image_type
     mount_split_image
-    mmls -a $IMAGE | \
-    while read LINE
-    do
-        if [ $COUNT -gt 5 ] #Skip first five lines of MMLS output
-        then
-            LINE=($echo $LINE) #make LINE into an array
+    MMLS=$(mmls -a $IMAGE)
+    if [ $? = 0 ]
+    then
+        echo "$MMLS" | \
+        while read LINE
+        do
+            if [ $COUNT -gt 5 ] #Skip first five lines of MMLS output
+            then
+                LINE=( $(echo $LINE) ) #make LINE into an array
+        
+                VOLUME=${LINE[0]/:/} #read first item of array,strip colon
+                VOLUME=${VOLUME#0} #strip leading zero
+        
+                OFFSET=${LINE[2]} #read third item of array
+                until [ ${OFFSET:0:1} != 0 ] #strip leading zeros
+                do
+                    OFFSET=${OFFSET#0}
+                done
     
-            VOLUME=${LINE[0]/:/} #read first item of array,strip colon
-            VOLUME=${VOLUME#0} #strip leading zero
+                MNTPNT="/media/$DIR_NAME/${DIR_NAME}_vol$VOLUME/"
+                mkdir -p "$MNTPNT"
+                echo "${LINE[5]} file system detected in volume $VOLUME at sector offset $OFFSET" >&2
     
-            OFFSET=${LINE[2]} #read third item of array
-            until [ ${OFFSET:0:1} != 0 ] #strip leading zeros
-            do
-                OFFSET=${OFFSET#0}
-            done
-
-            MNTPNT="/media/$DIR_NAME/${DIR_NAME}_vol_$VOLUME/"
-            mkdir -p "$MNTPNT"
-            echo "${LINE[5]} file system detected in volume $VOLUME at sector offset $OFFSET" >&2
-
-            mount_volumes
-            echo -e "\tmounted at $MNTPNT with $TOOL" >&2
-        fi
-        COUNT=$(($COUNT+1))
-    done
+                mount_volumes
+                echo -e "\tmounted at $MNTPNT with $TOOL" >&2
+            fi
+            COUNT=$(($COUNT+1))
+        done
+    else
+        OFFSET=0
+        VOLUME=0
+        MNTPNT="/media/$DIR_NAME/${DIR_NAME}_vol$VOLUME/"
+        mkdir -p "$MNTPNT"
+        echo "Unpartitioned media detected."
+        mount_volumes
+        echo -e "\tmounted at $MNTPNT with $TOOL" >&2
+    fi
 fi
 
 exit 0
