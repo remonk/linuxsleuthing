@@ -42,6 +42,7 @@ install_linuxsleuthing()
         if [ $tool = nautilus-scripts ]
         then
             cp -R $PROJECTS_DIR/linuxsleuthing/nautilus-scripts/* $SCRIPTS_DIR
+            cp -R $PROJECTS_DIR/linuxsleuthing/nautilus-scripts/* /root/.gnome2/nautilus-scripts
         else 
             cp $PROJECTS_DIR/linuxsleuthing/$tool/* $INSTALL_DIR
         fi
