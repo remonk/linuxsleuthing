@@ -1,10 +1,13 @@
 #!/bin/bash
 #: Title    : rbfstab
 #: Author   : "John Lehr" <slo.sleuth@gmail.com>
-#: Date     : 08/23/2011
-#: Version  : 0.1.0
+#: Date     : 09/09/2011
+#: Version  : 0.1.1
 #: Desc     : rewrite fstab on hotplug for write protection
 #: Options  : -i install, -r remove
+
+#: 08/23/11 : v0.1.0, first release
+#: 09/09/11 : v0.1.1, implemented 'noload' option for ext3/4, no longer forced ext2, disabled all swap
 
 ## Variables
 PATH="/bin:/sbin:/usr/bin:/usr/sbin"
@@ -133,40 +136,31 @@ do
     [ -d $MOUNTPOINT ] || mkdir -p $MOUNTPOINT 
     
     ## default read-only options
-    OPTIONS="ro,loop,noauto,user,noexec,nodev,noatime"
+    OPTIONS="ro,noauto,user,noexec,nodev,noatime"
 
     ## file system specific options
     case "$FSTYPE" in
-        ntfs) OPTIONS="${OPTIONS},umask=000,show_sys_files,streams_interface=windows" ;;
+        ntfs) FSTYPE="ntfs-3g"; OPTIONS="${OPTIONS},umask=000,\
+        show_sys_files,streams_interface=windows,allow_other" ;;
         msdos) OPTIONS="${OPTIONS},umask=000,quiet" ;;
         vfat) OPTIONS="${OPTIONS},umask=000,shortname=mixed,quiet" ;;
         ext) OPTIONS="${OPTIONS}" ;;
         ext2) OPTIONS="${OPTIONS}" ;;
-        ext3) OPTIONS="${OPTIONS}" ;;
-        ext4) OPTIONS="${OPTIONS}" ;;
-        xfs) OPTIONS="norecovery,${OPTIONS}" ;;
+        ext3) OPTIONS="${OPTIONS},noload" ;;
+        ext4) OPTIONS="${OPTIONS},noload" ;;
+        xfs) OPTIONS="norecovery,${OPTIONS},loop" ;;
         jfs) OPTIONS="nointegrity,${OPTIONS}" ;;
-        reiserfs) OPTIONS="nolog,${OPTIONS}" ;;
-        hfs) OPTIONS="${OPTIONS}" ;;
+        reiserfs) OPTIONS="nolog,${OPTIONS},loop" ;;
+        hfs) FSTYPE="hfsplus"; OPTIONS="${OPTIONS}" ;;
         hfsplus) OPTIONS="${OPTIONS}" ;;
         swap) OPTIONS=ro,noauto ;;
-    esac
-
-    ## Mount ext3/4 as ext2 to prevent fsck in corrupted file system
-    case "$FSTYPE" in 
-        ext3|ext4) FSTYPE="ext2" ;;
-        hfs) FSTYPE="hfsplus" ;;
     esac
 
     ## Make partition with label $WRITE_LABEL writeable
     if [ "$(blkid -s LABEL -o value "$DEVICE")" = "LABEL=\"$WRITE_LABEL\"" ]
     then
-        echo "CAINE Forensics save partition found at $DEVICE, write enabled."
-        OPTIONS="rw"
-        if [ "$FSTYPE" = "ntfs" ]
-        then
-            FSTYPE="ntfs-3g"
-        fi
+        echo "\"$WRITE_LABEL\" save partition found at $DEVICE, write enabled."
+        OPTIONS="default"
     fi
 
     # Add modified mounting options to fstab
