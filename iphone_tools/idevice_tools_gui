@@ -23,7 +23,11 @@ idevice_backup()
     idevicebackup backup ${dir} | \
     yad --progress \
         --image=$image \
-        --text="Creating Backup at $dir..."
+        --text="Creating Backup at $dir..." \
+        --pulsate \
+        --auto-kill \
+        --auto-close
+    yad --image --text="Backup complete." --button=gtk-ok
 }
 
 analyze_backup()

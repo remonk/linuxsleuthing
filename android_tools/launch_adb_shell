@@ -1,0 +1,13 @@
+#!/bin/bash
+#: name : launch_adb_shell
+
+adb root
+
+if [ $? -gt 0 ]
+then
+    yad --text="Error: no Android device detected" \
+        --button=gtk-ok
+    exit 1
+fi
+
+gnome-terminal --hide-menubar -t "adb shell" -e "adb shell"
