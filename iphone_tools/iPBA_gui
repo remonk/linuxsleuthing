@@ -1,0 +1,22 @@
+#!/bin/bash
+#: name : iPBA_gui
+
+image=/usr/share/icons/Mint-X/devices/128/phone.svg
+text="Select the iPhone (iOS4) backup directory.
+Must contain <u>Manifest.mbdb</u> file."
+
+dir=$(yad --form \
+    --title="iPhone Backup Analyzer" \
+    --image=$image \
+    --text="$text" \
+    --field="Selection:":DIR)
+dir=${dir//|/\/}
+
+ls $dir/Manifest.mbdb >/dev/null
+
+if [ $? -gt 0 ]
+then
+    yad --text="Error: Manifest.mbdb not present."
+else
+    python /opt/iPhone-Backup-Analyzer/main.py -d $dir
+fi

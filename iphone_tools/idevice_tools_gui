@@ -19,30 +19,31 @@ idevice_backup()
         --image=$image \
         --text="Select directory to write backup:" \
         --field="Selection:":DIR)
-    idevicebackup backup ${dir%|} | \
+    dir=${dir//|/\/}
+    idevicebackup backup ${dir} | \
     yad --progress \
         --image=$image \
         --text="Creating Backup at $dir..."
 }
 
-idevice_syslog()
+analyze_backup()
 {
-    idevicesyslog | \
-    yad $text_info
+    iPBA_gui 
 }
+
 until [ $? = 1 ]
 do
     yad --image=$image \
         --text="$intro_text" \
         --button="Device Info":2 \
         --button="Create Backup":4 \
-        --button="Show Syslog":6 \
+        --button="Examine Backup":6 \
         --button="Cancel":1
 
     case $? in 
         1) exit ;;
         2) idevice_info ;;
         4) idevice_backup ;;
-        6) idevide_syslog ;;
+        6) analyze_backup ;;
     esac
 done
