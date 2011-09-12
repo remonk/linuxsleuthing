@@ -101,6 +101,9 @@ fi
 [ $INSTALL = 1 ] && install_script
 [ $REMOVE = 1 ] && remove_script
 
+## disable swap (remove for installed OS if desired)
+swapoff -a
+
 ## Exit if script is already running
 if [ -e /var/run/rebuildfstab.pid ]; then
  ps "$(</var/run/rebuildfstab.pid)" >/dev/null 2>&1 && exit 0
