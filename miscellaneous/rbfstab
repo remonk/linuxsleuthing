@@ -65,7 +65,7 @@ EOF
 }
 
 ## Run as root warning
-[ $UID = 0 ] || echo "You must be root." || exit 1 
+[ $UID -ne 0 ] && echo "You must be root." && exit 1 
 
 ## list of options program will accept;
 ## options followed by a colon take arguments
@@ -177,7 +177,7 @@ mv "$TMP" /etc/fstab
 ## remove process file for next run
 rm -f /var/run/rebuildfstab.pid
 
-remove_unsused_dirs
+remove_unused_dirs
 
 ## Flush file system buffers
 sync

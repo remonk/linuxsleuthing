@@ -1,0 +1,48 @@
+#!/bin/bash
+#: name : idevice_tools_gui
+
+title="iDevice Utilities"
+image=/usr/share/icons/Mint-X/devices/128/phone.svg
+text_info="--text-info --title="$title" --image=$image --fontname="Monospace:10" --height=400 --width=600"
+intro_text="Connect a single iphone device by USB cable before continuing and
+select from options below:"
+
+idevice_info()
+{
+    ideviceinfo | \
+    yad $text_info
+}
+
+idevice_backup()
+{
+    dir=$(yad --form \
+        --image=$image \
+        --text="Select directory to write backup:" \
+        --field="Selection:":DIR)
+    idevicebackup backup ${dir%|} | \
+    yad --progress \
+        --image=$image \
+        --text="Creating Backup at $dir..."
+}
+
+idevice_syslog()
+{
+    idevicesyslog | \
+    yad $text_info
+}
+until [ $? = 1 ]
+do
+    yad --image=$image \
+        --text="$intro_text" \
+        --button="Device Info":2 \
+        --button="Create Backup":4 \
+        --button="Show Syslog":6 \
+        --button="Cancel":1
+
+    case $? in 
+        1) exit ;;
+        2) idevice_info ;;
+        4) idevice_backup ;;
+        6) idevide_syslog ;;
+    esac
+done

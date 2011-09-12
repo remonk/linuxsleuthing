@@ -45,6 +45,7 @@ install_linuxsleuthing()
             cp -R $PROJECTS_DIR/linuxsleuthing/nautilus-scripts/* /root/.gnome2/nautilus-scripts
         else 
             cp $PROJECTS_DIR/linuxsleuthing/$tool/* $INSTALL_DIR
+            [[ $tool = miscellaneous ]] && rm $INSTALL_DIR/rbfstab
         fi
     done
 }
@@ -53,7 +54,7 @@ install_sheran()
 {
     [[ $tool = ConParse ]] && ln -s /opt/$tool/cparse.sh $INSTALL_DIR/cparse.sh
     [[ $tool = bbt ]] && ln -s /opt/$tool/bbt.py $INSTALL_DIR/bbt.py
-    [[ $tool = evt2qlite ]] && ln -s /opt/$tool/e2s.py $INSTALL_DIR/e2s.py
+    [[ $tool = evt2sqlite ]] && ln -s /opt/$tool/e2s.py $INSTALL_DIR/e2s.py
 }
 
 ## Main Script
