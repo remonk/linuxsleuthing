@@ -1,0 +1,99 @@
+#!/bin/bash
+#: Title    : mounter
+#: Author   : "John Lehr" <slo.sleuth@gmail.com>
+#: Date     : 09/14/2011
+#: Version  : 0.1.0
+#: Desc     : rewrite fstab on hotplug for write protection
+#: Options  : none
+
+mount_disks()
+{
+    dev_list=
+    selection=
+    count=0
+    instructions="Detected <b>block devices</b> and their current mount status.
+Unmounted devices will be mounted and vice versa.
+
+Select devices to mount/unmount:"
+    devices=$(blkid -o device | grep -v ram)
+
+    for device in $devices
+    do
+        count=$(($count+1))
+        # Determine file system type
+        fs_type=$(blkid -s TYPE -o value $device)
+        
+        # Ignore swap
+        [ "$fs_type" = "swap" ] && continue
+        
+        # Determine volume label
+        vol_label=$(blkid -s LABEL -o value $device)
+        [ -z "$vol_label" ] && vol_label="(None)"
+        
+        # Determine if currently mounted
+        grep -q ^$device /etc/mtab
+        [ $? = 0 ] && mounted=Yes || mounted=No
+        
+        # Create a device list
+        dev_list="$dev_list $count $device ${fs_type// /_} ${vol_label// /_} $mounted"
+    done
+    
+    selection=$(yad --list \
+        --window-icon=gtk-harddisk \
+        --image=gtk-harddisk \
+        --title=mounter \
+        --text="$instructions" \
+        --column= \
+        --column=Device \
+        --column=FS\ Type \
+        --column=Label \
+        --column=Mounted \
+        --checklist \
+        --height=250 \
+        --print-column=2 \
+        --button=gtk-refresh:2 \
+        --button=gtk-cancel:1 \
+        --button=gtk-ok:0 \
+        $dev_list)
+    
+    # read exit code from button push
+    case $? in 
+        0) local run=0;; # Continue
+        1) exit 0;; # Exit on "cancel"
+        2) local run=1; mount_disks ;; # Restart on refresh
+    esac
+
+    # Exit if no user selection on "ok"
+    if [ -z "$selection" ]
+    then
+        yad --title=mounter \
+            --window-icon=gtk-harddisk \
+            --image=gtk-dialog-error \
+            --text="Error: No devices selected.\n\nExiting." \
+            --width=200 \
+            --button=gtk-ok
+        exit 1
+    fi
+
+    if [ $run = 0 ]
+    then
+        # obtain root privileges
+        gksudo -k -m "Root Password required to continue:" "echo -n"
+        
+        # mount/umount user selected devices
+        for device in $selection
+        do
+            device=${device//|/}
+            grep -q ^$device /etc/mtab
+            [ $? = 0 ] && sudo umount $device || sudo mount $device
+        done
+    fi
+}
+
+# Make mount_disks function executable by yad
+export -f mount_disks
+
+# Launch notification applet
+yad --notification --image=gtk-harddisk --text="Disk Mounter" --command="bash -c mount_disks" &
+
+exit 0
