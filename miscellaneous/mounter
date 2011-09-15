@@ -75,12 +75,9 @@ Select devices to mount/unmount:"
         exit 1
     fi
 
+    # mount/umount user selected devices
     if [ $run = 0 ]
     then
-        # obtain root privileges
-        gksudo -k -m "Root Password required to continue:" "echo -n"
-        
-        # mount/umount user selected devices
         for device in $selection
         do
             device=${device//|/}

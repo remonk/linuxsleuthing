@@ -1,11 +1,14 @@
 #!/bin/bash
 #: Name         : shaft.sh
 #: Author       : John Lehr <slo.sleuth@gmail.com>
-#: Date         : 08/15/2011
-#: Version      : 0.1.0
+#: Date         : 09/15/2011
+#: Version      : 0.1.1
 #: Description  : Install miscellaneous projects to support forensics
 #: Options      : None
 #: License      : GPLv3
+
+#: 09/15/2011   : fixed rbfstab install, added shaft.sh update notice
+#: 08/15/2011   : initial release
 
 ## To do
 #: add uninstall option
@@ -36,6 +39,8 @@ install_pytsk()
 
 install_linuxsleuthing()
 {
+    [ "$(md5sum /$PROJECTS_DIR/linuxsleuthing/shaft.sh)" = "$(md5sum /$INSTALL_DIR/shaft.sh)" ] || \
+    UPDATED="shaft.sh updated, please rerun with 'sudo shaft.sh'"
     cp $PROJECTS_DIR/linuxsleuthing/shaft.sh $INSTALL_DIR
     for tool in $LINUXSLEUTHING_TOOLS
     do
@@ -45,7 +50,7 @@ install_linuxsleuthing()
             cp -R $PROJECTS_DIR/linuxsleuthing/nautilus-scripts/* /root/.gnome2/nautilus-scripts
         else 
             cp $PROJECTS_DIR/linuxsleuthing/$tool/* $INSTALL_DIR
-            [[ $tool = miscellaneous ]] && rm $INSTALL_DIR/rbfstab
+            [[ $tool = miscellaneous ]] && mv $INSTALL_DIR/rbfstab /usr/sbin
         fi
     done
 }
@@ -125,3 +130,6 @@ do
         fi
      fi
 done
+
+echo -e "\t$UPDATED"
+exit 0
