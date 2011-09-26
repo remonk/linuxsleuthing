@@ -61,11 +61,15 @@ mount_volumes()
     if [ $? -eq 0 ] && [ $MOUNTER -eq 1 ] 
     then
         tskfuse.py -o ro,allow_other,offset=$(($OFFSET*512)) "$IMAGE" "$MNTPNT"
+        [ $? -gt 0 ] && echo "Mounting error." && exit 1
         TOOL=\"tskfuse.py\"
     else
-        [[ "$(fsstat -o $OFFSET $IMAGE | head -3)" =~ NTFS ]] && NTFS_OPTS=",show_sys_files,streams_interface=windows"
-        mount -o ro,loop,offset=$(($OFFSET*512)),user$NTFS_OPTS "$IMAGE" "$MNTPNT"
-        TOOL=\"mount\"
+        [[ "$(fsstat -o $OFFSET $IMAGE | head -3)" =~ NTFS ]] && \
+            NTFS_OPTS=,show_sys_files,streams_interface=windows,allow_other && \
+            FSTYPE=-t\ ntfs-3g
+        mount $FSTYPE -o ro,loop,offset=$(($OFFSET*512)),user$NTFS_OPTS "$IMAGE" "$MNTPNT"
+        [ $? -gt 0 ] && echo "Mounting error." && exit 1
+        TOOL="\"mount\" command"
     fi
 }
 
@@ -150,11 +154,11 @@ else
                 do
                     OFFSET=${OFFSET#0}
                 done
-    
+
                 MNTPNT="/media/$DIR_NAME/${DIR_NAME}_vol$VOLUME/"
                 mkdir -p "$MNTPNT"
                 echo "${LINE[5]} file system detected in volume $VOLUME at sector offset $OFFSET" >&2
-    
+
                 mount_volumes
                 echo -e "\tmounted at $MNTPNT with $TOOL" >&2
             fi
