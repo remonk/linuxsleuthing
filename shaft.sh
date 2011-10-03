@@ -122,7 +122,7 @@ do
                 hg update
                 install_$project
             fi
-        else 
+        else
             echo -e "\nDownloading and installing $project..." >&2
             cd $PROJECTS_DIR
             hg clone http://code.google.com/p/$project $project
