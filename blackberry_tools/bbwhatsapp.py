@@ -2,15 +2,16 @@
 #: Title        : bbmessenger
 #: Author       : "John Lehr" <slo.sleuth@gmail.com>
 #: Date         : 10/03/2011
-#: Version      : 0.1.0
+#: Version      : 0.1.1
 #: Description  : Decode BlackBerry WhatsApp databases
-#: Options      : --no-header
+#: Options      : --no-header, --utc
 #: License      : GPLv3
 
-#: 10/04/2011   : v0.1.1 initial release
+#: 10/03/2011   : v0.1.0 initial release
+#: 10/03/2011   : v0.1.1 added UTC time output option
 
 import sys, argparse, sqlite3
-from time import strftime, localtime
+from time import strftime, localtime, gmtime
 
 def printdb(database):
     try: 
@@ -36,8 +37,11 @@ def printdb(database):
             #isolate phone number from jid
             who = key_remote_jid.split('@')[0]
             
-            #convert timestamp to local time    
-            time = strftime('%Y-%m-%d %H:%M:%S (%Z)', localtime(timestamp/1000))
+            #convert timestamp to local time or utc
+            zone = localtime
+            if utc:
+                zone = gmtime
+            time = strftime('%Y-%m-%d %H:%M:%S (%Z)', zone(timestamp/1000))
 
             #print csv formatted output to stdout
             print('{},{},{},"{}",{},{},{}'.format(time, type, who, data, status,media_mime_type,media_url))
@@ -50,13 +54,15 @@ if __name__ == '__main__':
         description='Process WhatsApp SMS database.',
         epilog='Converts timestamps to local time and interprets field values.  Prints to stdout.')
     parser.add_argument('database', help='a WhatsApp messageStore.db database')
-    parser.add_argument('-n', '--no-header', dest='noheader', action='store_true',help='do not print filename or column header')
+    parser.add_argument('-n', '--no-header', dest='noheader', action='store_true', help='do not print filename or column header')
+    parser.add_argument('-u', '--utc', dest='utc', action='store_true', help='Show UTC time instead of local')
     parser.add_argument('-V', '--version', action='version', version='%(prog)s v0.1.1')
 
     args = parser.parse_args()
     
     database = args.database
     noheader = args.noheader
+    utc = args.utc
 
     if noheader:
         printdb(database)
