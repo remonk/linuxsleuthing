@@ -1,104 +1,62 @@
-#!/bin/bash
-#: Title 	: iphone_sms
-#: Author	: "John Lehr" <slo.sleuth@gmail.com>
-#: Date		: 05/04/2011
-#: Version	: 1.0.2
-#: Description	: Dump/interpret iphone sms.db messages table 
-#: Options	: None
+#!/usr/bin/env python3
+#: Title        : iphone_sms
+#: Author       : "John Lehr" <slo.sleuth@gmail.com>
+#: Date         : 05/04/2011
+#: Version      : 1.0.2
+#: Description  : Dump/interpret iphone sms.db messages table 
+#: Options      : None
 
-#: 05/04/2011 : v1.0.2 added extended output formats, updated code schema
-#: 04/12/2011 : v1.0.1 updated flags translations
-#: 03/22/2011 : v1.0.0 Initial Release
+#: 03/22/2011   : v1.0.0 Initial Release
+#: 04/12/2011   : v1.0.1 updated flags translations
+#: 05/04/2011   : v1.0.2 added extended output formats, updated code schema
+#: 10/05/2011   : v2.0.0 converted to python from bash
 
-#: TO DO
-#: add arguments to sort on different columns
 
-## Variables
-progname=${0##*/}
-deps=sqlite3
-csv=0
-html=0
-line=0
-list=0
-raw=0
+import sqlite3, argparse
+from time import strftime, localtime, gmtime
 
-## Functions
+sms_flags = { 2 : 'Recd SMS', 3 : 'Sent SMS/MMS', 4 : 'Recd MMS', 33 : 'Unsent' , 35 : 'Failed Send', 129 : 'Deleted'}
+read_flags = { 0 : 'Unread', 1: 'Read' }
 
-usage()
-{
-	echo "USAGE: $progname [-h] sms.db"
+def printdb(args):
+    '''Prints the rows from the iPhone sms.db, interpreting the flags.'''
+    
+    if not args.noheader:
+        print('File: "{}"'.format(args.database))
+        print('Record #,Date,Type,Phone Number,AdressBook ID,Duration')
+    
+    try: 
+        conn = sqlite3.connect(args.database)
+        c = conn.cursor()
 
-	cat << EOF
-	
-Options (-r may be combined with output option):
-	-c	output to csv (default is sqlite list format)
-	-h	print this help
-	-H	output to html
-	-l	output one field per line
-	-r	raw message table dump (flags are not interpreted)
+        for ROWID, address, date, text, flags,replace, svc_center, group_id, association_id, height, UIFlags, version, subject, country, headers, recipients, read in c.execute('select * from message'):
 
-Options MUST preceed the file to be processed. 
+            #convert flags object to sms_flag dictionary value
+            type = sms_flags.get(flags, 'Unknown')
+            
+            #convert read object to read_flags dictionary value
+            status = read_flags.get(read, 'Unknown') 
+    
+            #convert timestamp to local time or utc
+            if args.utc:
+                time = strftime('%Y-%m-%d %H:%M:%S (UTC)', gmtime(date))
+            else:
+                time = strftime('%Y-%m-%d %H:%M:%S (%Z)', localtime(date))
 
-Information: $progname dumps the iPhone sms.db file contents to standard
-output.  It interprets the flags to make reading the output easier.
+            print('{},{},{},{},"{}",{}'.format(ROWID, time, type, address, text, read))
 
-EOF
-}
+    except sqlite3.Error:
+            print('SQLite Error: wrong or incompatible database')
 
-check_deps ()
-{
-	for i in $deps; do
-		which $i >/dev/null
-		if [ $? -gt 0 ]; then
-			echo "Error: $i is not installed or is not in the path"
-		fi
-	done
-}
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        description='Process iPhone SMS database.',
+        epilog='Converts timestamps to local time and interprets flag values.  Prints to stdout.')
+    parser.add_argument('database', help='an iPhone sms.db database')
+    parser.add_argument('-n', '--no-header', dest='noheader', action='store_true', help='do not print filename or column header')
+    parser.add_argument('-u', '--utc', dest='utc', action='store_true', help='Show UTC time instead of local')
+    parser.add_argument('-V', '--version', action='version', version='%(prog)s v2.0.0')
 
-## Check for installed dependencies
-check_deps
+    args = parser.parse_args()
 
-## list of options program will accept;
-## options followed by a colon take arguments
-optstring=chHlr
-
-## The loop calls getops until there are no more options on the command 
-## line.  Each option is stored in $opt, any option arguments are stored
-## in OPTARG
-while getopts $optstring opt; do
-	case $opt in
-		c) csv=1; format=-csv ;;
-		h) usage >&2; exit 0 ;;
-		H) html=1; format=-html ;;
-		l) line=1; format=-line ;;
-		r) raw=1 ;;
-		*) echo; usage >&2; exit 1 ;;
-	esac
-done
-
-## Remove options from the command line
-## $OPTIND points to the next, unparsed argument
-shift "$(( $OPTIND -1 ))"
-
-## Check for conflicting arguments
-if [ $(($csv+$html+$line)) -gt 1 ]; then
-	echo "Error: arguments -c -H and -l may not be used together" >&2
-	exit 1
-fi
-
-## Check database is an iphone "sms.db"
-tables=$(sqlite3 $1 .tables)
-if ! [[ $tables =~ message && $tables =~ msg_ && $tables =~ group_ && $tables =~ _Sqlite ]]; then
-	echo -e "ERROR: Not an iPhone 'sms.db'\n"
-	usage
-	exit 1
-fi
-
-#export call table to stdout
-if [ $raw = 1 ]; then
-	sqlite3 -header $format $1 "select * from message"
-else
-	sqlite3 -header $format $1 "select datetime(date,'unixepoch','localtime') as date, case flags when 2 then 'Received SMS' when 3 then 'Sent SMS/MMS' when 4 then 'Received MMS' when 33 then 'Unsent SMS/MMS' when 35 then 'Failed Send' when 129 then 'Deleted' else 'Unknown' end as 'Type(from Flags)', address as 'Phone #' , text as Message, flags as Flags from message"
-fi
-
-exit 0
+    printdb(args)
