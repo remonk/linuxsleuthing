@@ -1,0 +1,72 @@
+#!/usr/bin/env python3
+#: Title        : iphone_vm.py
+#: Author       : "John Lehr" <slo.sleuth@gmail.com>
+#: Date         : 10/05/2011
+#: Version      : 1.0.0
+#: Description  : Dump/interpret iphone voicemail.db table 
+#: Options      : None
+#: License      : GPLv3
+
+#: 10/05/2011   : v1.0.0 Initial Release
+
+import sqlite3, argparse
+from time import strftime, localtime, gmtime
+
+vm_flags = { 2 : 'Unheard', 3 : 'Heard', 11 : 'Deleted', 75 : 'Deleted' }
+
+def printdb(args):
+    '''Prints the rows from the iPhone voicemail.db, interpreting the flags.'''
+    
+    if not args.noheader:
+        print('File: "{}"'.format(args.database))
+        print('Date,From,Callback #,Recording, Duration (sec),Status,Deleted Date')
+    
+    try: 
+        conn = sqlite3.connect(args.database)
+        c = conn.cursor()
+
+        for ROWID, remote_uid, date, token, sender, callback_num, duration, expiration, trashed_date, flags in c.execute('select ROWID, remote_uid, date, token, sender, callback_num, duration, expiration, trashed_date, flags from voicemail order by date asc'):
+            
+            #Convert ROWID to filename
+            ROWID = str(ROWID)
+            filename = ROWID +'.amr'
+            
+            #convert sender to match iPhone display 
+            if sender == None:
+                sender = "Unknown"
+            
+            if trashed_date == 0:
+                status_date = None
+            
+            #convert timestamp to local time or utc
+            if args.utc:
+                time = strftime('%Y-%m-%d %H:%M:%S (UTC)', gmtime(date))
+                if trashed_date != 0:
+                    status_date = strftime('%Y-%m-%d %H:%M:%S (UTC)', gmtime(trashed_date + 978307200))
+            else:
+                time = strftime('%Y-%m-%d %H:%M:%S (%Z)', localtime(date))
+                if trashed_date != 0:
+                    status_date = strftime('%Y-%m-%d %H:%M:%S (%Z)', localtime(trashed_date + 978307200))
+
+            #convert flags object to flag dictionary value
+            status = vm_flags.get(flags, 'Unknown')
+
+            #print row
+            print('{},{},{},{},{},{},{}'.format(time, sender, callback_num, filename, duration, status, status_date))
+    
+    except sqlite3.Error:
+            print('SQLite Error: wrong or incompatible database')
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        description='Process iPhone call history database.',
+        epilog='Converts timestamps to local time and interprets flag values.  Prints to stdout.')
+    parser.add_argument('database', help='an iPhone voicemail.db database')
+    parser.add_argument('-n', '--no-header', dest='noheader', action='store_true', help='do not print filename or column header')
+    parser.add_argument('-u', '--utc', dest='utc', action='store_true', help='Show UTC time instead of local')
+    parser.add_argument('-V', '--version', action='version', version='%(prog)s v1.0.0')
+
+    args = parser.parse_args()
+
+    printdb(args)

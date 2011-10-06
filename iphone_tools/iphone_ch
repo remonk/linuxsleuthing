@@ -1,103 +1,57 @@
-#!/bin/bash
-#: Title 	: iphone_ch
-#: Author	: "John Lehr" <slo.sleuth@gmail.com>
-#: Date		: 05/04/2011
-#: Version	: 1.0.1
-#: Description	: Dump/interpret iphone call_history.db call table 
-#: Options	: None
+#!/usr/bin/env python3
+#: Title        : iphone_ch
+#: Author       : "John Lehr" <slo.sleuth@gmail.com>
+#: Date         : 10/04/2011
+#: Version      : 2.0.0
+#: Description  : Dump/interpret iphone call_history.db call table 
+#: Options      : None
+#: License      : GPLv3
 
-#: 05/04/2011 : v1.0.1 added extended output formats, updated code schema
-#: 03/22/2011 : v1.0.0 Initial Release
+#: 03/22/2011   : v1.0.0 Initial Release
+#: 05/04/2011   : v1.0.1 added extended output formats, updated code schema
+#: 10/04/2011   : v2.0.0 migrated to python3 from bash
 
-#: TO DO
-#: add arguments to sort on different columns
+import sqlite3, argparse
+from time import strftime, localtime, gmtime
 
-## Variables
-progname=${0##*/}
-deps=sqlite3
-csv=0
-html=0
-line=0
-list=0
-raw=0
+flag = {4 : 'Incoming', 5 : 'Outgoing', 8 : 'Cancelled'}
 
-## Functions
+def printdb(args):
+    '''Prints the rows from the iPhone callhistory.db, interpreting the flags.'''
+    
+    if not args.noheader:
+        print('File: "{}"'.format(args.database))
+        print('Record #,Time,Type,Phone Number,AdressBook ID,Duration')
+    
+    try: 
+        conn = sqlite3.connect(args.database)
+        c = conn.cursor()
 
-usage()
-{
-	echo "USAGE: $progname [-h] call_history.db"
+        for ROWID, address, date, duration, flags, id, name, country_code in c.execute('select * from call'):
 
-	cat << EOF
-	
-Options (-r may be combined with output option):
-	-c	output to csv (default is sqlite list format)
-	-h	print this help
-	-H	output to html
-	-l	output one field per line
-	-r	raw call table dump (flags are not interpreted)
+            #convert flags object to flag dictionary value
+            type = flag.get(flags, 'Unknown')
+    
+            #convert timestamp to local time or utc
+            if args.utc:
+                time = strftime('%Y-%m-%d %H:%M:%S (UTC)', gmtime(date))
+            else:
+                time = strftime('%Y-%m-%d %H:%M:%S (%Z)', localtime(date))
 
-Options MUST preceed the file to be processed. 
+            print('{},{},{},{},{},{}'.format(ROWID, time, type, address, id, duration))
 
-Information: $progname dumps the iPhone call_history.db file contents to
-standard output.  It interprets the flags to make reading the output easier.
+    except sqlite3.Error:
+            print('SQLite Error: wrong or incompatible database')
 
-EOF
-}
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        description='Process iPhone call history database.',
+        epilog='Converts timestamps to local time and interprets flag values.  Prints to stdout.')
+    parser.add_argument('database', help='an iPhone call_history.db database')
+    parser.add_argument('-n', '--no-header', dest='noheader', action='store_true', help='do not print filename or column header')
+    parser.add_argument('-u', '--utc', dest='utc', action='store_true', help='Show UTC time instead of local')
+    parser.add_argument('-V', '--version', action='version', version='%(prog)s v2.0.0')
 
-check_deps ()
-{
-	for i in $deps; do
-		which $i >/dev/null
-		if [ $? -gt 0 ]; then
-			echo "Error: $i is not installed or is not in the path"
-		fi
-	done
-}
+    args = parser.parse_args()
 
-## Check for installed dependencies
-check_deps
-
-## list of options program will accept;
-## options followed by a colon take arguments
-optstring=chHlr
-
-## The loop calls getops until there are no more options on the command 
-## line.  Each option is stored in $opt, any option arguments are stored
-## in OPTARG
-while getopts $optstring opt; do
-	case $opt in
-		c) csv=1; format=-csv ;;
-		h) usage >&2; exit 0 ;;
-		H) html=1; format=-html ;;
-		l) line=1; format=-line ;;
-		r) raw=1 ;;
-		*) echo; usage >&2; exit 1 ;;
-	esac
-done
-
-## Remove options from the command line
-## $OPTIND points to the next, unparsed argument
-shift "$(( $OPTIND -1 ))"
-
-## Check for conflicting arguments
-if [ $(($csv+$html+$line)) -gt 1 ]; then
-	echo "Error: arguments -c -H and -l may not be used together" >&2
-	exit 1
-fi
-
-#check database is an iphone "call_history.db"
-tables=$(sqlite3 $1 .tables)
-if ! [[ $tables =~ data && $tables =~ call && $tables =~ _Sqlite ]]; then
-	echo -e "ERROR: Not an iPhone 'call_history.db'\n"
-	usage
-	exit 1
-fi
-
-#export call table to stdout
-if [ $raw = 1 ]; then
-	sqlite3 -header $format $1 "select * from call"
-else
-	sqlite3 -header $format $1 "select datetime(date,'unixepoch','localtime') as 'Date', case flags when '4' then 'Incoming' when '5' then 'Outgoing' when '8' then 'Blocked' else 'Unknown' end as 'Call Type(from Flags)', address as 'Phone #', duration as 'duration(seconds)', flags as Flags from call"
-fi
-
-exit 0
+    printdb(args)

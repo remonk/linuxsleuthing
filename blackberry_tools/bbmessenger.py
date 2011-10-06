@@ -11,51 +11,66 @@
 #: 08/18/2011   : v0.1.1 fixed line ending issue where inline line feeds in text message caused error
 #: 10/03/2011   : v0.1.2 added help and arguments
 #: 10/03/2011   : v0.1.3 added UTC output option
+#: 10/05/2011   : v0.2.0 added directory recursion
 
-import sys, io, argparse
+import io, os, sys, argparse
 from time import strftime, localtime, gmtime
 
-def print_records(csv):
+def recurse_directory(dir):
+    if os.path.isdir(dir):
+        for root, dirs, files in os.walk(dir):
+            for name in files:
+                file = os.path.join(root,name)
+                if file[-3:] == 'OLD' or file[-3:] == 'csv':
+                    args.csv = file
+                    print_records(args)
+    else:
+        print('Error: "{}" not a directory'.format(dir), file=sys.stderr)
+
+def print_records(args):
+    '''Print records from BlackBerry Messenger and Gtalk save files'''
+    
+    if not args.noheader:
+        print('File: "{}"'.format(args.csv))
+        print('Date,DateCode,Sender,Receiver,Message')
+
     try:
-        with io.open(csv,newline="\r\n") as db_file:
+        with io.open(args.csv, newline="\r\n") as db_file:
             for line_no, line in enumerate(db_file):
-                if noheader and line_no == 0:
-                    pass
-                elif line_no == 0:
-                    print(line)
-                    print('Date,DateCode,Sender,Receiver,Message')
+                if line_no == 0:                    
                     line_no += 1
                 else:
+                    #create objects from row items
                     datecode, sender, receiver, message = line.split(',', 3)
 
-                    zone = localtime
-                    if utc:
-                        zone = gmtime
-
+                    #convert datecode to local time or UTC
                     date = int(datecode[8:18])
-                    date = strftime('%Y-%m-%d %H:%M:%S (%Z)', zone(date))
+                    if args.utc:
+                        date = strftime('%Y-%m-%d %H:%M:%S (UTC)', gmtime(date))
+                    else:
+                        date = strftime('%Y-%m-%d %H:%M:%S (%Z)', localtime(date))
+
+                    #print results to stdout
                     print('{},{},{},{},"{}"'.format(date, datecode, sender, receiver, message.strip()))
-    except:
-        print('Error: not a BlackBerry Messenger/Gtalk save file or an incompatible version')
+    
+    except IOError:
+        print('Error: not a BlackBerry Messenger/Gtalk save file or an incompatible version', file=sys.stderr)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Process BlackBerry Messenger/Gtalk save files.',
         epilog='Converts timestamps to local time.  Prints to stdout.')
+    
     parser.add_argument('csv', help='a BlackBerry Messenger/Gtalk csv file')
+    parser.add_argument('-d', '--directory', dest='directory', action='store_true', help='treat csv argument as dir to recurse')
     parser.add_argument('-n', '--no-header', dest='noheader', action='store_true',help='do not print filename or column header')
     parser.add_argument('-u', '--utc', dest='utc', action='store_true', help='Show UTC time instead of local')
-    parser.add_argument('-V', '--version', action='version', version='%(prog)s v0.1.3')
+    parser.add_argument('-V', '--version', action='version', version='%(prog)s v0.2.0')
     
     args = parser.parse_args()
-    
-    csv = args.csv
-    noheader = args.noheader
-    utc = args.utc
 
-    if noheader:
-        print_records(csv)
+    if args.directory:
+        recurse_directory(args.csv)
     else:
-        print('File: "{}"'.format(csv))
-        print_records(csv)
+        print_records(args)
 

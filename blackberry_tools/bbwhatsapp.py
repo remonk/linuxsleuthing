@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#: Title        : bbmessenger
+#: Title        : bbwhatsapp.py
 #: Author       : "John Lehr" <slo.sleuth@gmail.com>
 #: Date         : 10/03/2011
 #: Version      : 0.1.1
@@ -9,45 +9,47 @@
 
 #: 10/03/2011   : v0.1.0 initial release
 #: 10/03/2011   : v0.1.1 added UTC time output option
+#: 10/04/2011   : v0.1.2 code cleanup
 
-import sys, argparse, sqlite3
+import argparse, sqlite3
 from time import strftime, localtime, gmtime
 
-def printdb(database):
+type_flag = { 0 : 'Recd'}
+status_flag = { 0 : 'Read locally', 4 : 'Unread by recipient ', 5 : 'Read by recipient' }
+
+def printdb(args):
+    '''Print BlackBerry WhatsApp messageStore.db with interpretted flags and timestamps.'''
+    
+    if not args.noheader:
+        print('File: "{}"'.format(args.database))
+        print('Time,Type,To/From,Message,Status,Attachment(type),Attachment(URL)')
+
     try: 
-        conn = sqlite3.connect(database)
+        conn = sqlite3.connect(args.database)
         c = conn.cursor()
 
         for key_remote_jid,key_from_me,key_id,status,needs_push,data,timestamp,media_url,media_mime_type,media_wa_type,media_size,media_name,latitude,longitude,thumb_image,gap_behind,media_filename,remote_resource in c.execute('select * from messages'):
 
             #interpret if message sent or received
-            if key_from_me == 0:
-                type = 'Recd'
-            else:
-                type = 'Sent'
+            type = type_flag.get(key_from_me, 'Sent')
 
             #interpret if message read or unread
-            if status == 0 or status == 5:
-                status = "Read"
-            elif status == 4:
-                status = "Unread"
-            else:
-                status = "Unknown"
+            status = status_flag.get(status, 'Unknown')
 
             #isolate phone number from jid
             who = key_remote_jid.split('@')[0]
             
             #convert timestamp to local time or utc
-            zone = localtime
-            if utc:
-                zone = gmtime
-            time = strftime('%Y-%m-%d %H:%M:%S (%Z)', zone(timestamp/1000))
+            if args.utc:
+                time = strftime('%Y-%m-%d %H:%M:%S (UTC)', gmtime(timestamp/1000))
+            else:
+                time = strftime('%Y-%m-%d %H:%M:%S (%Z)', localtime(timestamp/1000))
 
             #print csv formatted output to stdout
             print('{},{},{},"{}",{},{},{}'.format(time, type, who, data, status,media_mime_type,media_url))
 
-    except:
-        print('Error: not a WhatsApp db or an incompatible version')
+    except sqlite3.error:
+        print('SQLite Error: wrong or incompatible database')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
@@ -56,17 +58,8 @@ if __name__ == '__main__':
     parser.add_argument('database', help='a WhatsApp messageStore.db database')
     parser.add_argument('-n', '--no-header', dest='noheader', action='store_true', help='do not print filename or column header')
     parser.add_argument('-u', '--utc', dest='utc', action='store_true', help='Show UTC time instead of local')
-    parser.add_argument('-V', '--version', action='version', version='%(prog)s v0.1.1')
+    parser.add_argument('-V', '--version', action='version', version='%(prog)s v0.1.2')
 
     args = parser.parse_args()
-    
-    database = args.database
-    noheader = args.noheader
-    utc = args.utc
 
-    if noheader:
-        printdb(database)
-    else:
-        print('File: "{}"'.format(database))
-        print("Time,Type,To/From,Message,Status,Attachment(type),Attachment(URL)")
-        printdb(database)
+    printdb(args)
