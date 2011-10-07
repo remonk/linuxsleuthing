@@ -10,6 +10,7 @@
 #: 03/22/2011   : v1.0.0 Initial Release
 #: 05/04/2011   : v1.0.1 added extended output formats, updated code schema
 #: 10/04/2011   : v2.0.0 migrated to python3 from bash
+#: 10/07/2011   : v2.0.1 Corrected db version compatibility error, updated id field to read 'None' if no corresponding AB entry                
 
 import sqlite3, argparse
 from time import strftime, localtime, gmtime
@@ -27,10 +28,14 @@ def printdb(args):
         conn = sqlite3.connect(args.database)
         c = conn.cursor()
 
-        for ROWID, address, date, duration, flags, id, name, country_code in c.execute('select * from call'):
+        # Read specific fields in the database to accomodate different versions of call_history.db
+        for ROWID, address, date, duration, flags, id in c.execute('select  ROWID, address, date, duration, flags, id from call'):
 
             #convert flags object to flag dictionary value
             type = flag.get(flags, 'Unknown')
+
+            if id == -1:
+                id = None
     
             #convert timestamp to local time or utc
             if args.utc:
@@ -50,7 +55,7 @@ if __name__ == '__main__':
     parser.add_argument('database', help='an iPhone call_history.db database')
     parser.add_argument('-n', '--no-header', dest='noheader', action='store_true', help='do not print filename or column header')
     parser.add_argument('-u', '--utc', dest='utc', action='store_true', help='Show UTC time instead of local')
-    parser.add_argument('-V', '--version', action='version', version='%(prog)s v2.0.0')
+    parser.add_argument('-V', '--version', action='version', version='%(prog)s v2.0.1')
 
     args = parser.parse_args()
 

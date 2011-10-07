@@ -1,0 +1,213 @@
+#!/usr/bin/env python
+#: Title        : iphone_backup.py
+#: Author       : "John Lehr" <slo.sleuth@gmail.com>
+#: Date         : 10/04/2011
+#: Version      : 1.0.0
+#: Description  : Dump/interpret iphone call_history.db call table 
+#: Options      : brief output, copy
+#: License      : GPLv3
+
+#: 10/06/2011   : v1.0.0 Initial Release
+
+import sys, argparse, shutil, os
+from time import localtime, strftime, gmtime
+
+def getint(data, offset, intsize):
+    """Retrieve an integer (big-endian) and new offset from the current offset"""
+    
+    value = 0
+    
+    while intsize > 0:
+        value = (value<<8) + ord(data[offset])
+        offset = offset + 1
+        intsize = intsize - 1
+    
+    return value, offset
+
+def getstring(data, offset):
+    """Retrieve a string and new offset from the current offset into the data"""
+    
+    if data[offset] == chr(0xFF) and data[offset+1] == chr(0xFF):
+        return '', offset+2 # Blank string
+    
+    length, offset = getint(data, offset, 2) # 2-byte length
+    value = data[offset:offset+length]
+    
+    return value, (offset + length)
+
+def process_mbdb_file(filename):
+    mbdb = {} # Map offset of info in this file => file info
+    data = open(filename).read()
+    
+    if data[0:4] != "mbdb":
+        raise Exception("This does not look like an MBDB file")
+    
+    offset = 4
+    offset = offset + 2 # value x05 x00, not sure what this is
+    
+    while offset < len(data):
+        fileinfo = {}
+        fileinfo['start_offset'] = offset
+        fileinfo['domain'], offset = getstring(data, offset)
+        fileinfo['filename'], offset = getstring(data, offset)
+        fileinfo['linktarget'], offset = getstring(data, offset)
+        fileinfo['datahash'], offset = getstring(data, offset)
+        fileinfo['unknown1'], offset = getstring(data, offset)
+        fileinfo['mode'], offset = getint(data, offset, 2)
+        fileinfo['unknown2'], offset = getint(data, offset, 4)
+        fileinfo['unknown3'], offset = getint(data, offset, 4)
+        fileinfo['userid'], offset = getint(data, offset, 4)
+        fileinfo['groupid'], offset = getint(data, offset, 4)
+        fileinfo['mtime'], offset = getint(data, offset, 4)
+        fileinfo['atime'], offset = getint(data, offset, 4)
+        fileinfo['ctime'], offset = getint(data, offset, 4)
+        fileinfo['filelen'], offset = getint(data, offset, 8)
+        fileinfo['flag'], offset = getint(data, offset, 1)
+        fileinfo['numprops'], offset = getint(data, offset, 1)
+        fileinfo['properties'] = {}
+        
+        for ii in range(fileinfo['numprops']):
+            propname, offset = getstring(data, offset)
+            propval, offset = getstring(data, offset)
+            fileinfo['properties'][propname] = propval
+        
+        mbdb[fileinfo['start_offset']] = fileinfo
+    
+    return mbdb
+
+def process_mbdx_file(filename):
+    mbdx = {} # Map offset of info in the MBDB file => fileID string
+    data = open(filename).read()
+    
+    if data[0:4] != "mbdx": raise Exception("This does not look like an MBDX file")
+    offset = 4
+    offset = offset + 2 # value 0x02 0x00, not sure what this is
+    filecount, offset = getint(data, offset, 4) # 4-byte count of records 
+    
+    while offset < len(data):
+        # 26 byte record, made up of ...
+        fileID = data[offset:offset+20] # 20 bytes of fileID
+        fileID_string = ''.join(['%02x' % ord(b) for b in fileID])
+        offset = offset + 20
+        mbdb_offset, offset = getint(data, offset, 4) # 4-byte offset field
+        mbdb_offset = mbdb_offset + 6 # Add 6 to get past prolog
+        mode, offset = getint(data, offset, 2) # 2-byte mode field
+        mbdx[mbdb_offset] = fileID_string
+    
+    return mbdx
+
+def modestr(val):
+    def mode(val):
+        if (val & 0x4):
+            r = 'r'
+        else:
+            r = '-'
+        
+        if (val & 0x2):
+            w = 'w'
+        else:
+            w = '-'
+        
+        if (val & 0x1):
+            x = 'x'
+        else:
+            x = '-'
+        
+        return r+w+x
+    
+    return mode(val>>6) + mode((val>>3)) + mode(val)
+
+def fileinfo_str(f, verbose=False):
+    #if not verbose: return "(%s)%s::%s" % (f['fileID'], f['domain'], f['filename'])
+    if not verbose: 
+        return "%s|%s" % (f['fileID'], f['filename'])
+    
+    if (f['mode'] & 0xE000) == 0xA000:
+        type = 'l' # symlink
+    elif (f['mode'] & 0xE000) == 0x8000:
+        type = '-' # file
+    elif (f['mode'] & 0xE000) == 0x4000:
+        type = 'd' # dir
+    else: 
+        print >> sys.stderr, "Unknown file type %04x for %s" % (f['mode'], fileinfo_str(f, False))
+        type = '?' # unknown
+    
+    info = ("%s%s,%d,%d,%d,%s,%s,%s,%s,%s,%s" % 
+            (type, modestr(f['mode']&0x0FFF) , f['userid'], f['groupid'], f['filelen'], 
+             convert_times(f['mtime']), convert_times(f['atime']), convert_times(f['ctime']), f['fileID'], f['domain'], f['filename']))
+    
+    if type == 'l':
+        info = info + ' -> ' + f['linktarget'] # symlink destination
+    
+    for name, value in f['properties'].items(): # extra properties
+        info = info + ' ' + name + '=' + repr(value)
+    
+    return info
+
+def convert_times(datecode):
+    datecode = int(datecode)
+    if args.utc:
+        time = strftime('%Y-%m-%d %H:%M:%S (UTC)', gmtime(datecode))
+    else:
+        time = strftime('%Y-%m-%d %H:%M:%S (%Z)', localtime(datecode))
+    return time
+
+def rename_files(srcdir, oldname, dstdir, newname,domain):
+    srcname = os.path.join(srcdir, oldname)
+    newdir = os.path.join(dstdir, domain, os.path.dirname(newname))
+    dstname = os.path.join(dstdir, domain, newname)
+    errors = []
+    
+    if not os.path.isdir(dstdir):
+        try:
+            os.mkdir(dstdir)
+        except IOError as err:
+            errors.extend(err.args[0])
+    if os.path.isfile(srcname):
+        if os.path.exists(dstname):
+            print "Destination %s already exists. %s not copied" % (dstname, srcname)
+        if not os.path.exists(newdir):
+            os.makedirs(newdir)
+                        
+        try:
+            print "Copying %s to %s..." % (srcname, dstname)
+            shutil.copy2(srcname, dstname)
+        except shutil.Error as err:
+            errors.extend(err.args[0])
+
+if __name__ == '__main__':
+    
+    verbose = False
+    utc = False
+    
+    parser = argparse.ArgumentParser(
+        description='Process iPhone Backup Manifest.mbdb database.',
+        epilog='Reads Mainfest.mbdb and prints list of files in iPhone backup, similar to "ls -l".  Timestamps are displayed in local time by default.  Prints to stdout.')
+    parser.add_argument('database', help='a iphone Manifest.mbdb database')
+    parser.add_argument('-b', '--brief', dest='verbose', action='store_false', help='print backup_name |original_name')
+    parser.add_argument('-d', '--directory', dest='dir', help='output directory to restore file tree')
+    parser.add_argument('-u', '--utc', dest='utc', action='store_true', help='Show UTC time instead of local')
+    parser.add_argument('-V', '--version', action='version', version='%(prog)s v1.0.0')
+
+    args = parser.parse_args()
+    
+    mbdb = process_mbdb_file(args.database)
+    mbdx = process_mbdx_file(args.database[0:-1] + 'x')
+    
+    if args.verbose:
+        verbose = True
+    if args.utc:
+        utc = True
+
+    for offset, fileinfo in mbdb.items():
+        if offset in mbdx:
+            fileinfo['fileID'] = mbdx[offset]
+        else:
+            fileinfo['fileID'] = "<nofileID>"
+            print >> sys.stderr, "No fileID found for %s" % fileinfo_str(fileinfo)
+        
+        if args.dir and not fileinfo['fileID'] == "<nofileID>":
+            backupdir = os.path.dirname(args.database)
+            rename_files(backupdir, fileinfo['fileID'], args.dir, fileinfo['filename'], fileinfo['domain'])
+        else:
+            print fileinfo_str(fileinfo, verbose)
