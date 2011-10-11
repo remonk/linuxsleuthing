@@ -43,7 +43,7 @@ def printdb(args):
             else:
                 time = strftime('%Y-%m-%d %H:%M:%S (%Z)', localtime(date))
 
-            print('{},{},{},{},"{}",{}'.format(ROWID, time, type, address, text, read))
+            print('{},{},{},{},"{}",{}'.format(ROWID, time, type, address, text, status))
 
     except sqlite3.Error:
             print('SQLite Error: wrong or incompatible database')
