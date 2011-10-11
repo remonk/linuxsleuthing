@@ -13,6 +13,7 @@
 #: 10/03/2011   : v0.1.3 added UTC output option
 #: 10/05/2011   : v0.2.0 added directory recursion
 #: 10/11/2011   : v0.2.1 added sorting for directory recursion
+#: 10/11/2011   : v0.2.2 code cleanup
 
 import io, os, sys, argparse
 from time import strftime, localtime, gmtime
@@ -50,9 +51,8 @@ def print_records(args):
     try:
         with io.open(args.csv, newline="\r\n") as db_file:
             for line_no, line in enumerate(db_file):
-                if line_no == 0:                    
-                    line_no += 1
-                else:
+                if line_no > 0:                    
+
                     #create objects from row items
                     datecode, sender, receiver, message = line.split(',', 3)
 
@@ -63,7 +63,7 @@ def print_records(args):
                     else:
                         date = strftime('%Y-%m-%d %H:%M:%S (%Z)', localtime(date))
 
-                    #print results to stdout
+                    #add date conversion to row
                     row = '{},{},{},{},"{}"'.format(date, datecode, sender, receiver, message.strip())
                     data.append(row)
         return data
@@ -80,7 +80,7 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--directory', dest='directory', action='store_true', help='treat csv argument as dir to recurse')
     parser.add_argument('-n', '--no-header', dest='noheader', action='store_true',help='do not print file name, version, or column headers')
     parser.add_argument('-u', '--utc', dest='utc', action='store_true', help='Show UTC time instead of local')
-    parser.add_argument('-V', '--version', action='version', version='%(prog)s v0.2.1')
+    parser.add_argument('-V', '--version', action='version', version='%(prog)s v0.2.2')
     
     args = parser.parse_args()
 
