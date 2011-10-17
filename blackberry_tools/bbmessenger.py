@@ -2,7 +2,7 @@
 #: Title        : bbmessenger
 #: Author       : "John Lehr" <slo.sleuth@gmail.com>
 #: Date         : 10/11/2011
-#: Version      : 0.2.1
+#: Version      : 0.2.2
 #: Description  : Decode BlackBerry Messenger/Gtalk save files
 #: Options      : --no-header, --utc, --directory
 #: License      : GPLv3
