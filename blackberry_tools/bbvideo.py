@@ -2,10 +2,14 @@
 #: Title        : bbvideo.py
 #: Author       : "John Lehr" <slo.sleuth@gmail.com>
 #: Date         : 10/17/2011
-#: Version      : 0.1.0
+#: Version      : 0.1.1
 #: Description  : Dump/interpret Black Berry videoart.dat sqlite table 
 #: Options      : None
 #: License      : GPLv3
+
+#: 10/17/2011   : v0.1.0 Initial release
+#: 10/17/2011   : v0.1.1 Bug fix in thumbnail filename creation
+#: 10/17/2011   : v0.1.2 Added original timestamp to csv output
 
 import sqlite3, argparse, os
 from time import strftime, localtime, gmtime
@@ -16,7 +20,7 @@ def printdb(args):
     
     if not args.noheader:
         print('File: "{}"'.format(args.database))
-        print('Date, Video Name, id, Source, Source Timestamp')
+        print('Date, Timestamp, Video Name, id, Source, Source Timestamp')
     
     try: 
         conn = sqlite3.connect(args.database)
@@ -34,11 +38,11 @@ def printdb(args):
                 time = strftime('%Y-%m-%d %H:%M:%S (%Z)', \
                     localtime(date/1000))
 
-            print('{},"{}",{},{},{}'.format(time, name[7:], id, source, 
-                source_time))
+            print('{},{},"{}",{},{},{}'.format(time, date, name[7:], \
+                id, source, source_time))
         
             if args.dump:
-                tname = name.split(os.path.sep)[-1] + '.jpg'
+                tname = name.split('/')[-1] + '.jpg'
                 with open(tname, 'wb') as output_file:
                     output_file.write(thumb)
 
@@ -69,7 +73,7 @@ if __name__ == '__main__':
         help='Show UTC time instead of local')
     parser.add_argument('-V', '--version', 
         action='version', 
-        version='%(prog)s v0.1.0')
+        version='%(prog)s v0.1.2')
 
     args = parser.parse_args()
 
