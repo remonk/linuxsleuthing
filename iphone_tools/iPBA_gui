@@ -10,13 +10,13 @@ dir=$(yad --form \
     --image=$image \
     --text="$text" \
     --field="Selection:":DIR)
+[ $? -gt 0 ] && exit 0
+
 dir=${dir//|/\/}
 
-ls $dir/Manifest.mbdb >/dev/null
-
-if [ $? -gt 0 ]
+if [ -e $dir/Manifest.mbdb ]
 then
-    yad --text="Error: Manifest.mbdb not present."
+	python /opt/iPhone-Backup-Analyzer/main.py -d $dir
 else
-    python /opt/iPhone-Backup-Analyzer/main.py -d $dir
+	yad --text="Error: Manifest.mbdb not present."
 fi

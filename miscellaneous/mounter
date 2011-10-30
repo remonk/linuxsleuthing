@@ -40,7 +40,7 @@ mount_disks()
         [ -z "$vol_label" ] && vol_label="(none)"
 
         # Determine volume size
-        vol_size=$(($(sfdisk -s $device)/1024))
+        vol_size=$(($(sudo sfdisk -s $device)/1024))
         vol_size=$(printf "%'d\n" $vol_size)
 
         # Determine if currently mounted
@@ -75,7 +75,7 @@ mount_disks()
         --column=Status \
         --checklist \
         --height=300 \
-        --width=550 \
+        --width=600 \
         --print-column=2 \
         --button=gtk-refresh:2 \
         --button=gtk-cancel:1 \
@@ -95,7 +95,7 @@ mount_disks()
         yad --title=mounter \
             --window-icon=gtk-harddisk \
             --image=gtk-dialog-error \
-            --text="Error: No devices selected.\n\nExiting." \
+            --text="Error: No devices selected." \
             --width=200 \
             --button=gtk-ok
         exit 1
