@@ -17,14 +17,18 @@ mount_disks()
     
     if [ -e /etc/udev/rules.d/fstab.rules ]
     then
-        ro="<span size='x-large'>Selected devices will be mounted <b><u>READ-ONLY</u></b>.</span>"
+        ro="<span size='x-large'>Selected devices will be mounted \
+<b><u>READ-ONLY</u></b>.</span>"
     else 
-        ro="<span size='x-large'>Selected devices will be mounted <span foreground='red'><b><u>WRITEABLE</u></b></span>.</span>"
+        ro="<span size='x-large'>Selected devices will be mounted \
+<span foreground='red'><b><u>WRITEABLE</u></b></span>.</span>"
     fi
 
-    instructions="Detected <b>block devices</b> and their current mount status. Unmounted devices will be mounted and vice versa. \n\n$ro \n\nSelect devices to mount/unmount:"
+    instructions="Detected <b>block devices</b> and their current \
+mount status. Unmounted devices will be mounted and vice versa. \n\n\
+$ro \n\nSelect devices to mount/unmount:"
 
-    devices=$(blkid -o device | grep -v ram)
+    devices=$(sudo blkid -o device | grep -v ram)
 
     for device in $devices
     do
@@ -58,28 +62,16 @@ mount_disks()
         fi
 
         # Create a device list
-        dev_list="$dev_list $count $device ${fs_type// /_} ${vol_label// /_} $vol_size $mounted $status"
+        dev_list="$dev_list $count $device ${fs_type// /_} \
+${vol_label// /_} $vol_size $mounted $status"
     done
     
-    selection=$(yad --list \
-        --window-icon=gtk-harddisk \
-        --image=gtk-harddisk \
-        --title=mounter \
-        --text="$instructions" \
-        --column= \
-        --column=Device \
-        --column="FS Type" \
-        --column=Label \
-        --column="Size (MB)" \
-        --column="Mount Point" \
-        --column=Status \
-        --checklist \
-        --height=300 \
-        --width=600 \
-        --print-column=2 \
-        --button=gtk-refresh:2 \
-        --button=gtk-cancel:1 \
-        --button=gtk-ok:0 \
+    selection=$(yad --list --window-icon=gtk-harddisk \
+        --image=gtk-harddisk --title=mounter --text="$instructions" \
+        --column= --column=Device --column="FS Type" --column=Label \
+        --column="Size (MB)" --column="Mount Point" --column=Status \
+        --checklist --height=300 --width=600 --print-column=2 \
+        --button=gtk-refresh:2 --button=gtk-cancel:1 --button=gtk-ok:0 \
         $dev_list)
     
     # read exit code from button push
@@ -114,9 +106,10 @@ mount_disks()
                 [ $? = 1 ] && yad \
                     --window-icon=gtk-harddisk \
                     --image=gtk-dialog-error \
-                    --text="Error: device is busy.  Ensure no applications\nor windows are accessing device and try again."
+                    --text="Error: device is busy.  Ensure no \
+applications\nor windows are accessing device and try again."
             else
-                sudo mount $device
+                sudo mount $device /media/${device#/dev/}
             fi
         done
     fi
@@ -129,6 +122,7 @@ do
     which $dep >/dev/null
     [ $? -gt 0 ] && missing=1
 done
+
 [[ -n $missing ]] && echo -e "Error: missing dependency\nCheck that \"$deps\" are installed"
 
 # Make mount_disks function executable by yad

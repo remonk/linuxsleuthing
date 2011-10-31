@@ -21,8 +21,8 @@ RULE=/etc/udev/rules.d/fstab.rules
 ## Functions
 install_script()
 {
-    echo "$0 first time run:"
-    echo "* Installing $0 to $SCRIPT"
+    echo "\"$0\" first time run:"
+    echo "* Copying $0 to $SCRIPT"
     cp $0 /usr/sbin/
     echo "* Creating udev rule $RULE"
     cat << EOF > $RULE
@@ -51,7 +51,8 @@ remove_unused_dirs()
     for DIR in $(ls /media/)
     do
         [[ $DIR =~ cdrom ]] && continue
-        grep -q ^/dev/$DIR /etc/fstab
+        DEVICE=$(blkid -o device)
+        echo $DEVICE | grep -q ^/dev/$DIR
         [ $? = 0 ] || rmdir /media/$DIR
     done
 }

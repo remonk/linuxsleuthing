@@ -29,7 +29,7 @@ def printdb(args):
         conn = sqlite3.connect(args.database)
         c = conn.cursor()
 
-        for ROWID, address, date, text, flags,replace, svc_center, group_id, association_id, height, UIFlags, version, subject, country, headers, recipients, read in c.execute('select * from message'):
+        for ROWID, address, date, text, flags, read in c.execute('select ROWID, address, date, text, flags, read from message'):
 
             #convert flags object to sms_flag dictionary value
             type = sms_flags.get(flags, 'Unknown')
