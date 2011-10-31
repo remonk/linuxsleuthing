@@ -1,13 +1,16 @@
 #!/bin/bash
 #: Title    : mounter
 #: Author   : "John Lehr" <slo.sleuth@gmail.com>
-#: Date     : 09/26/2011
-#: Version  : 0.1.1
+#: Date     : 10/31/2011
+#: Version  : 0.1.2
 #: Desc     : mount device(s) selected by user
 #: Options  : none
 
-#: 09/26/2011 : added partition size, rbfstab status, mount location/status
-#: 09/14/2011 : Initial release
+#: 09/14/11 : v0.1.0 Initial release
+#: 09/26/11 : v0.1.1 added partition size, rbfstab status, mount point
+#:          : location and write status
+#: 10/31/11 : v0.1.2 Bug fix to allow mounting of devices with rbfstab
+#:          : disabled
 
 mount_disks()
 {
@@ -123,12 +126,14 @@ do
     [ $? -gt 0 ] && missing=1
 done
 
-[[ -n $missing ]] && echo -e "Error: missing dependency\nCheck that \"$deps\" are installed"
+[[ -n $missing ]] && echo -e "Error: missing dependency\nCheck that \
+\"$deps\" are installed"
 
 # Make mount_disks function executable by yad
 export -f mount_disks
 
 # Launch notification applet
-yad --notification --image=gtk-harddisk --text="Disk Mounter" --command="bash -c mount_disks" &
+yad --notification --image=gtk-harddisk --text="Disk Mounter" \
+    --command="bash -c mount_disks" &
 
 exit 0
