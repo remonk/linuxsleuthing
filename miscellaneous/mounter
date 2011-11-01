@@ -111,6 +111,9 @@ ${vol_label// /_} $vol_size $mounted $status"
                     --image=gtk-dialog-error \
                     --text="Error: device is busy.  Ensure no \
 applications\nor windows are accessing device and try again."
+            elif [ -e /etc/udev/rules.d/fstab.rules ]
+            then
+				sudo mount $device
             else
                 sudo mount $device /media/${device#/dev/}
             fi
