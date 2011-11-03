@@ -19,12 +19,12 @@ UMOUNT=0
 check_deps()
 {
     for PROG in $DEPS; do
-		which $PROG >/dev/null
-		if [ $? -gt 0 ]; then
+        which $PROG >/dev/null
+        if [ $? -gt 0 ]; then
             [[ "$PROG" = "mmls" ]] && PROG=sleuthkit
-			echo "Error: $PROG is not installed or is not in the path"
-		fi
-	done
+            echo "Error: $PROG is not installed or is not in the path"
+        fi
+    done
 }
 
 get_image_type()
@@ -77,7 +77,7 @@ usage()
 {
     echo "USAGE: $PROGNAME [-ut] IMAGE"
 
-	cat << EOF
+    cat << EOF
 
 $PROGNAME forensic mounter.  Mounts all detected allocated volumes in IMAGE
 read-only in the /media directory.  Partitions are named IMAGE_VOLUME.  If
@@ -103,12 +103,12 @@ optstring=htu
 ## line.  Each option is stored in $opt, any option arguments are stored
 ## in OPTARG
 while getopts $optstring opt; do
-	case $opt in
-		h) usage >&2; exit 0 ;;
-		t) MOUNTER=1 ;;
+    case $opt in
+        h) usage >&2; exit 0 ;;
+        t) MOUNTER=1 ;;
         u) UMOUNT=1 ;;
-		*) echo; usage >&2; exit 1 ;;
-	esac
+        *) echo; usage >&2; exit 1 ;;
+    esac
 done
 
 ## Remove options from the command line

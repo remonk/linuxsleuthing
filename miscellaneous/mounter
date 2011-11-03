@@ -18,6 +18,8 @@ mount_disks()
     selection=
     count=0
     
+    sudo rbfstab
+    
     if [ -e /etc/udev/rules.d/fstab.rules ]
     then
         ro="<span size='x-large'>Selected devices will be mounted \

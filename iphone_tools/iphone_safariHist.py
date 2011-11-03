@@ -43,39 +43,39 @@ def BuildDict(dict_node):
 def main(plist):
     '''Parse xml string from Safari History.plist'''
     
-    try:
-        data = []
+    #try:
+    data = []
+    
+    xmldoc = minidom.parseString(plist)
+    dict_list = xmldoc.getElementsByTagName('dict')
+    
+    if not args.noheader:
+        print('"Last Visited","Page Title","Page URL","Visit Count"')
+
+    for record in dict_list[1:]:
+        item = (BuildDict(record))
+        title = item.get('title','')
+        url = item.get('','')
+        visits = item.get('visitCount','')
+        lastvisit = int(float(item.get('lastVisitedDate',''))) + \
+                978307200
+
+        if args.utc:
+            lastvisit = strftime('%Y-%m-%d %H:%M:%S (UTC)', \
+                gmtime(lastvisit))
+        else:
+            lastvisit = strftime('%Y-%m-%d %H:%M:%S (%Z)', \
+                localtime(lastvisit))
         
-        xmldoc = minidom.parseString(plist)
-        dict_list = xmldoc.getElementsByTagName('dict')
-        
-        if not args.noheader:
-            print('"Last Visited","Page Title","Page URL","Visit Count"')
+        data.append('{},"{}",{},{}'.format(lastvisit,title,url,\
+            visits))
 
-        for record in dict_list[1:]:
-            item = (BuildDict(record))
-            title = item.get('title','')
-            url = item.get('','')
-            visits = item.get('visitCount','')
-            lastvisit = int(float(item.get('lastVisitedDate',''))) + \
-                    978307200
+    data.sort()
+    return data
 
-            if args.utc:
-                lastvisit = strftime('%Y-%m-%d %H:%M:%S (UTC)', \
-                    gmtime(lastvisit))
-            else:
-                lastvisit = strftime('%Y-%m-%d %H:%M:%S (%Z)', \
-                    localtime(lastvisit))
-            
-            data.append('{},"{}",{},{}'.format(lastvisit,title,url,\
-                visits))
-
-        data.sort()
-        return data
-
-    except:
-        print('Error: "{}" is an incompatible or improper bplist file.'.\
-            format(args.plist))
+    #except:
+        #print('Error: "{}" is an incompatible or improper bplist file.'.\
+            #format(args.plist))
 
 if __name__ == '__main__':
     
