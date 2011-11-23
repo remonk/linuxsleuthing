@@ -41,25 +41,25 @@ install_linuxsleuthing()
 {
     [ "$(md5sum /$PROJECTS_DIR/linuxsleuthing/shaft.sh)" = "$(md5sum /$INSTALL_DIR/shaft.sh)" ] || \
     UPDATED="shaft.sh updated, please rerun with 'sudo shaft.sh'"
-    cp $PROJECTS_DIR/linuxsleuthing/shaft.sh $INSTALL_DIR
+    cp "$PROJECTS_DIR/linuxsleuthing/shaft.sh" "$INSTALL_DIR"
     for tool in $LINUXSLEUTHING_TOOLS
     do
-        if [ $tool = nautilus-scripts ]
+        if [ "$tool" = "nautilus-scripts" ]
         then
-            cp -R $PROJECTS_DIR/linuxsleuthing/nautilus-scripts/* $SCRIPTS_DIR
-            cp -R $PROJECTS_DIR/linuxsleuthing/nautilus-scripts/* /root/.gnome2/nautilus-scripts
+            cp -R "$PROJECTS_DIR"/linuxsleuthing/nautilus-scripts/* $SCRIPTS_DIR
+            cp -R "$PROJECTS_DIR"/linuxsleuthing/nautilus-scripts/* /root/.gnome2/nautilus-scripts
         else 
-            cp $PROJECTS_DIR/linuxsleuthing/$tool/* $INSTALL_DIR
-            [[ $tool = miscellaneous ]] && mv $INSTALL_DIR/rbfstab /usr/sbin
+            cp "$PROJECTS_DIR"/linuxsleuthing/$tool/* "$INSTALL_DIR"
+            [ "$tool" = "miscellaneous" ] && mv $INSTALL_DIR/rbfstab /usr/sbin
         fi
     done
 }
 
 install_sheran()
 {
-    [[ $tool = ConParse ]] && ln -s /opt/$tool/cparse.sh $INSTALL_DIR/cparse.sh
-    [[ $tool = bbt ]] && ln -s /opt/$tool/bbt.py $INSTALL_DIR/bbt.py
-    [[ $tool = evt2sqlite ]] && ln -s /opt/$tool/e2s.py $INSTALL_DIR/e2s.py
+    [ "$tool" = "ConParse" ] && ln -s /opt/$tool/cparse.sh $INSTALL_DIR/cparse.sh
+    [ "$tool" = "bbt" ] && ln -s /opt/$tool/bbt.py $INSTALL_DIR/bbt.py
+    [ "$tool" = "evt2sqlite" ] && ln -s /opt/$tool/e2s.py $INSTALL_DIR/e2s.py
 }
 
 ## Main Script
@@ -93,11 +93,11 @@ cd $PROJECTS_DIR
 #: Install projects
 for project in pytsk linuxsleuthing sheran
 do
-    if [ $project = sheran ]
+    if [ "$project" = "sheran" ]
     then
         for tool in $SHERAN_TOOLS
         do
-            if [ -d $PROJECTS_DIR/$tool ]
+            if [ -d "$PROJECTS_DIR/$tool" ]
             then
                 echo -e "\nUpdating $tool..." >&2
                 cd $PROJECTS_DIR/$tool
@@ -111,7 +111,7 @@ do
             fi
         done
     else
-        if [ -d $PROJECTS_DIR/$project ]
+        if [ -d "$PROJECTS_DIR/$project" ]
         then
             echo -e "\nUpdating $project..." >&2
             cd $PROJECTS_DIR/$project
