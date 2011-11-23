@@ -61,6 +61,7 @@ mount_split_image()
 mount_volumes()
 {
     NTFS_OPTS=
+    FSTYPE=
     which tskfuse.py >/dev/null
     if [ $? -eq 0 ] && [ $MOUNTER -eq 1 ] 
     then
