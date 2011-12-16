@@ -12,6 +12,8 @@
 #: 09/14/11 : v0.1.2, bug fixes in rm_unused_dirs, already running check
 #: 10/31/11 : v0.1.3, bug fix to keep mount points for plugged devices
 #:          : after rbfstab -r
+#: 12/15/11 : v0.1.2, bug fix for ext3: noload option not accepted by
+#:          : mount even though suggested in manual, forced ext2 instead
 
 ## Variables
 PATH="/bin:/sbin:/usr/bin:/usr/sbin"
@@ -159,7 +161,7 @@ show_sys_files,streams_interface=windows,allow_other" ;;
         vfat) OPTIONS="${OPTIONS},umask=000,shortname=mixed,quiet" ;;
         ext) OPTIONS="${OPTIONS}" ;;
         ext2) OPTIONS="${OPTIONS}" ;;
-        ext3) OPTIONS="${OPTIONS},noload" ;;
+        ext3) OPTIONS="${OPTIONS}" ;;
         ext4) OPTIONS="${OPTIONS},noload" ;;
         xfs) OPTIONS="norecovery,${OPTIONS},loop" ;;
         jfs) OPTIONS="nointegrity,${OPTIONS}" ;;
@@ -169,6 +171,8 @@ show_sys_files,streams_interface=windows,allow_other" ;;
         swap) OPTIONS=ro,noauto ;;
     esac
 
+	[ "$FSTYPE" = "ext3" ] && FSTYPE="ext2"
+	
     ## Make partition with label $WRITE_LABEL writeable
     if [ "$(blkid -s LABEL -o value "$DEVICE")" = "LABEL=\"$WRITE_LABEL\"" ]
     then
