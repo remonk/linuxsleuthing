@@ -51,7 +51,7 @@ get_meta ()
 	## Export exif with exiftool
 	filename="======== $i"
 	meta="$(exiftool "$i")"
-	if [ $itunes = 1 ] && [[ "$filename" =~ m4p ]] ; then
+	if [ $itunes = 1 ] && [[ "$filename" =~ m4[pv] ]] ; then
 		echo "$filename"
 		echo "$meta" | grep -E '^File Type|^Apple Store Account'
 		echo -e "Apple Store Real Name\t\t: $(strings "$i" | grep -m1 name | sed 's/name//')\n"
@@ -106,15 +106,21 @@ fi
 
 ## Search for files
 echo "Searching $path for files..." >&2
-find $path -type f |
-	while read i; do
-		type=$(file -bi "$i" | grep 'audio')
-		if [ -n "$type" ]; then
-			get_meta  #process file with get_meta function
-		fi
-	done
 
-## Print map notice
-
+if [ $itunes = 1 ]
+then
+	find "$path" -type f -name "*.m4[pv]" |
+		while read i; do
+			get_meta
+		done
+else
+	find "$path" -type f |
+		while read i; do
+			type=$(file -bi "$i" | grep -E 'image|audio|video')
+			if [ -n "$type" ]; then
+				get_meta  #process file with get_meta function
+			fi
+		done
+fi
 
 exit 0
