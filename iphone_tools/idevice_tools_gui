@@ -1,0 +1,61 @@
+#!/bin/bash
+#: name : idevice_tools_gui
+
+title="iDevice Utilities"
+image=/usr/share/icons/Mint-X/devices/128/phone.svg
+text_info="--text-info --title="$title" --image=$image --fontname="Monospace:10" --height=400 --width=600"
+intro_text="Connect a single iphone device by USB cable before continuing and
+select from options below:"
+
+idevice_info()
+{
+    ideviceinfo | \
+    sed -r 's/:/\n/'| \
+    yad --list --column Tag --column Data --width=600 --height=400 \
+		--button=gtk-ok:0
+}
+
+idevice_backup()
+{
+    dir=$(yad --form \
+        --image=$image \
+        --text="Select directory to write backup:" \
+        --field="Selection:":DIR)
+    [ $? = 1 ] && continue
+    
+    dir=${dir//|/\/}
+    
+    version=$(ideviceinfo | grep ProductVersion)
+    version=${version#*: }
+    case $version in 
+		3*) backupapp=idevicebackup ;;
+		4*|5*) backupapp=idevicebackup2 ;;
+	esac
+    
+    $backupapp backup ${dir} | \
+    yad --progress --image=$image --text="Creating Backup at $dir..." \
+        --pulsate --auto-kill --auto-close
+    yad --image=$image --text="Backup complete." --button=gtk-ok
+}
+
+analyze_backup()
+{
+    iPBA_gui 
+}
+
+until [ $? = 8 ]
+do
+    yad --image=$image \
+        --text="$intro_text" \
+        --button="Device Info":2 \
+        --button="Create Backup":4 \
+        --button="Examine Backup":6 \
+        --button="Cancel":8
+
+    case $? in 
+        2) idevice_info ;;
+        4) idevice_backup ;;
+        6) analyze_backup ;;
+        8) exit 0;;
+    esac
+done

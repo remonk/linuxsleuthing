@@ -1,0 +1,128 @@
+#!/bin/bash
+#: Title 	: iphone_music
+#: Author	: "John Lehr" <slo.sleuth@gmail.com>
+#: Date		: 05/04/2011
+#: Version	: 1.0.0
+#: Description	: extract metadata from iphone music files
+#: Options	: None
+
+#: 05/03/2011 : v1.0.0 Initial Release
+#: 01/19/2011 : V1.1.0 Speed enhancement to -a option
+#: 01/21/2012 : v1.1.1 Corrected help/error ouput (thanks to Leasim Leija)
+
+## Variables
+progname="${0##*/}"
+deps="exiftool"
+itunes=0
+verbose=0
+
+## Functions
+
+usage()
+{
+	echo "USAGE: $progname [-ahv] [path]"
+	echo "       where 'path' is the path to be searched"
+	cat << EOF
+	
+Options (only one option may be used at a time):
+	-a	extract Apple Store user information
+	-h	print this help
+	-v	verbose
+
+Options MUST preceed the path to be processed. 
+
+Information: $progname searches a path for audio files and dumps file
+metadata to standard output.  Optionally, Apple Store account data (real and
+user names) can be extracted from audio purchased through the Apple Store store.
+
+EOF
+}
+
+check_deps ()
+{
+	for i in $deps; do
+		which $i >/dev/null
+		if [ $? -gt 0 ]; then
+			echo "Error: $i is not installed or is not in the path"
+		fi
+	done
+}
+
+get_meta ()
+{
+	## Export exif with exiftool
+	filename="======== $i"
+	meta="$(exiftool "$i")"
+	if [ $itunes = 1 ] && [[ "$filename" =~ m4[pv] ]] ; then
+		echo "$filename"
+		echo "$meta" | grep -E '^File Type|^Apple Store Account'
+		echo -e "Apple Store Real Name\t\t: $(strings "$i" | grep -m1 name | sed 's/name//')\n"
+	elif [ $verbose = 1 ]; then
+		echo "$filename"
+		echo "$meta"
+		echo
+	elif [ $itunes = 0 ]; then
+		echo "$filename"
+		echo "$meta" | grep -E '^Title|^File Type|^Artist|^Album  '
+		echo
+	fi
+}
+
+notice ()
+{
+	echo -e "Open mapping output in mapping program or upload to http://www.gpsvisualizer.com/" >&2
+}
+
+## list of options program will accept;
+## options followed by a colon take arguments
+optstring=ahv
+
+## The loop calls getops until there are no more options on the command 
+## line.  Each option is stored in $opt, any option arguments are stored
+## in OPTARG
+while getopts $optstring opt; do
+	case $opt in
+		h) usage >&2; exit 0 ;;
+		a) itunes=1 ;;
+		v) verbose=1 ;;
+		*) echo; usage >&2; exit 1 ;;
+	esac
+done
+
+## Remove options from the command line
+## $OPTIND points to the next, unparsed argument
+shift "$(( $OPTIND -1 ))"
+
+## Check for conflicting arguments
+if [ $(( $verbose + $itunes )) -gt 1 ]; then
+	echo "Error: arguments -a and -v may not be used together" >&2
+	exit 1
+fi
+
+## Process file according to chosen option
+## Determine path to search
+path="$1"
+if [ -z $1 ]; then
+	path="$(pwd)"
+fi
+
+## Search for files
+echo "Searching $path for files..." >&2
+
+if [ $itunes = 1 ]
+then
+	find "$path" -type f -name "*.m4[pv]" |
+		while read i; do
+			get_meta
+		done
+else
+	find "$path" -type f |
+		while read i; do
+			type=$(file -bi "$i" | grep -E 'image|audio|video')
+			if [ -n "$type" ]; then
+				get_meta  #process file with get_meta function
+			fi
+		done
+fi
+
+exit 0

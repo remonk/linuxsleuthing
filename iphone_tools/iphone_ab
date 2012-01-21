@@ -1,0 +1,105 @@
+#!/bin/bash
+#: Title 	: iphone_ab
+#: Author	: "John Lehr" <slo.sleuth@gmail.com>
+#: Date		: 05/04/2011
+#: Version	: 1.0.1
+#: Description	: Dump/interpret iphone AddressBook.db messages table 
+#: Options	: None
+
+#: 05/04/2011 : v1.0.1 added extended output formats, updated code schema
+#: 03/25/2011 : v1.0.0 Initial Release
+
+#: TO DO
+#: add arguments to sort on different columns
+#: cross reference db with iPhone call_history.db
+
+## Variables
+progname=${0##*/}
+deps=sqlite3
+csv=0
+html=0
+line=0
+list=0
+raw=0
+
+## Functions
+
+usage()
+{
+	echo "USAGE: $progname [-h] AddressBook.db"
+
+	cat << EOF
+	
+Options (-r may be combined with output option):
+	-c	output to csv (default is sqlite list format)
+	-h	print this help
+	-H	output to html
+	-l	output one field per line
+	-L	output to list (default)
+	-r	raw ABPerson/ABMultivalue tables dump (flags are not interpreted)
+
+Options MUST preceed the file to be processed. 
+
+Information: $progname dumps the iPhone AddressBook.db file contents to
+standard output.  It interprets the flags to make reading the output easier.
+
+EOF
+}
+
+check_deps ()
+{
+	for i in $deps; do
+		which $i >/dev/null
+		if [ $? -gt 0 ]; then
+			echo "Error: $i is not installed or is not in the path"
+		fi
+	done
+}
+
+## Check for installed dependencies
+check_deps
+
+## list of options program will accept;
+## options followed by a colon take arguments
+optstring=chHlr
+
+## The loop calls getops until there are no more options on the command 
+## line.  Each option is stored in $opt, any option arguments are stored
+## in OPTARG
+while getopts $optstring opt; do
+	case $opt in
+		c) csv=1; format=-csv ;;
+		h) usage >&2; exit 0 ;;
+		H) html=1; format=-html ;;
+		l) line=1; format=-line ;;
+		r) raw=1 ;;
+		*) echo; usage >&2; exit 1 ;;
+	esac
+done
+
+## Remove options from the command line
+## $OPTIND points to the next, unparsed argument
+shift "$(( $OPTIND -1 ))"
+
+## Check for conflicting arguments
+if [ $(($csv+$html+$line)) -gt 1 ]; then
+	echo "Error: arguments -c -H and -l may not be used together" >&2
+	exit 1
+fi
+
+## Check database is an iphone "AddressBook.db"
+tables=$(sqlite3 $1 .tables)
+if ! [[ $tables =~ ABMultiValue && $tables =~ ABPerson && $tables =~ _Sqlite ]]; then
+	echo -e "ERROR: Not an iPhone 'AddressBook.db'\n"
+	usage
+	exit 1
+fi
+
+## Export call table to stdout
+if [ $raw = 1 ]; then
+	sqlite3 -header $format $1 "SELECT * FROM ABPerson, ABMultivalue WHERE rowid = record_id"
+else
+	sqlite3 -header $1 "SELECT rowid AS Row, first AS 'First Name', last AS 'Last Name', value AS 'Phone Number/Email', datetime(creationdate + 978307200, 'unixepoch', 'localtime') AS 'Record Created', datetime(ModificationDate  + 978307200, 'unixepoch', 'localtime') AS 'Record Modified' FROM ABPerson, ABMultivalue WHERE rowid = record_id"
+fi
+
+exit 0

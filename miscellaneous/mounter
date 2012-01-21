@@ -1,0 +1,144 @@
+#!/bin/bash
+#: Title    : mounter
+#: Author   : "John Lehr" <slo.sleuth@gmail.com>
+#: Date     : 10/31/2011
+#: Version  : 0.1.2
+#: Desc     : mount device(s) selected by user
+#: Options  : none
+
+#: 09/14/11 : v0.1.0 Initial release
+#: 09/26/11 : v0.1.1 added partition size, rbfstab status, mount point
+#:          : location and write status
+#: 10/31/11 : v0.1.2 Bug fix to allow mounting of devices with rbfstab
+#:          : disabled
+
+mount_disks()
+{
+    dev_list=
+    selection=
+    count=0
+    
+    sudo rbfstab
+    
+    if [ -e /etc/udev/rules.d/fstab.rules ]
+    then
+        ro="<span size='x-large'>Selected devices will be mounted \
+<b><u>READ-ONLY</u></b>.</span>"
+    else 
+        ro="<span size='x-large'>Selected devices will be mounted \
+<span foreground='red'><b><u>WRITEABLE</u></b></span>.</span>"
+    fi
+
+    instructions="Detected <b>block devices</b> and their current \
+mount status. Unmounted devices will be mounted and vice versa. \n\n\
+$ro \n\nSelect devices to mount/unmount:"
+
+    devices=$(sudo blkid -o device | grep -v ram)
+
+    for device in $devices
+    do
+        count=$(($count+1))
+        # Determine file system type
+        fs_type=$(blkid -s TYPE -o value $device)
+
+        # Ignore swap
+        [ "$fs_type" = "swap" ] && continue
+
+        # Determine volume label
+        vol_label=$(blkid -s LABEL -o value $device)
+        [ -z "$vol_label" ] && vol_label="(none)"
+
+        # Determine volume size
+        vol_size=$(($(sudo sfdisk -s $device)/1024))
+        vol_size=$(printf "%'d\n" $vol_size)
+
+        # Determine if currently mounted
+        mounted=($(grep ^$device /etc/mtab))
+        if [ -z $mounted ] 
+        then 
+            mounted="(none)"
+            status="(none)"
+        else
+            mounted="${mounted[1]}"
+            case ${mounted[3]} in
+                ro*) status="READ-ONLY" ;;
+                rw*) status="Writeable" ;;
+            esac
+        fi
+
+        # Create a device list
+        dev_list="$dev_list $count $device ${fs_type// /_} \
+${vol_label// /_} $vol_size $mounted $status"
+    done
+    
+    selection=$(yad --list --window-icon=gtk-harddisk \
+        --image=gtk-harddisk --title=mounter --text="$instructions" \
+        --column= --column=Device --column="FS Type" --column=Label \
+        --column="Size (MB)" --column="Mount Point" --column=Status \
+        --checklist --height=300 --width=600 --print-column=2 \
+        --button=gtk-refresh:2 --button=gtk-cancel:1 --button=gtk-ok:0 \
+        $dev_list)
+    
+    # read exit code from button push
+    case $? in 
+        0) local run=0;; # Continue
+        1) exit 0;; # Exit on "cancel"
+        2) local run=1; mount_disks ;; # Restart on refresh
+    esac
+
+    # Exit if no user selection on "ok"
+    if [ -z "$selection" ]
+    then
+        yad --title=mounter \
+            --window-icon=gtk-harddisk \
+            --image=gtk-dialog-error \
+            --text="Error: No devices selected." \
+            --width=200 \
+            --button=gtk-ok
+        exit 1
+    fi
+
+    # mount/umount user selected devices
+    if [ $run = 0 ]
+    then
+        for device in $selection
+        do
+            device=${device//|/}
+            grep -q ^$device /etc/mtab
+            if [ $? = 0 ]
+            then 
+                sudo umount $device 
+                [ $? = 1 ] && yad \
+                    --window-icon=gtk-harddisk \
+                    --image=gtk-dialog-error \
+                    --text="Error: device is busy.  Ensure no \
+applications\nor windows are accessing device and try again."
+            elif [ -e /etc/udev/rules.d/fstab.rules ]
+            then
+				sudo mount $device
+            else
+                sudo mount $device /media/${device#/dev/}
+            fi
+        done
+    fi
+}
+
+# Test for dependencies:
+deps="yad blkid sfdisk rbfstab"
+for dep in yad blkid rbfstab
+do
+    which $dep >/dev/null
+    [ $? -gt 0 ] && missing=1
+done
+
+[[ -n $missing ]] && echo -e "Error: missing dependency\nCheck that \
+\"$deps\" are installed"
+
+# Make mount_disks function executable by yad
+export -f mount_disks
+
+# Launch notification applet
+yad --notification --image=gtk-harddisk --text="Disk Mounter" \
+    --command="bash -c mount_disks" &
+
+exit 0

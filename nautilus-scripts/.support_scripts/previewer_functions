@@ -1,0 +1,49 @@
+#!/bin/bash
+#: Title 		: previewer_functions
+#: Author		: "John Lehr" <slo.sleuth@gmail.com>
+#: Date			: 05/04/2011
+#: Version		: 1.0.0
+#: Description	: functions to suppor the Previewer nautilus scripts
+#: Options		: None
+
+## Variables
+DIALOG=$(which yad)
+SAVE_DIR=$(cat $HOME/.save_dir 2>/dev/null)
+FILE_WINDOW_SIZE="--width=600 --height=400"
+
+check_cancel ()
+{
+	if [ $? = 1 ]; then
+		exit 1
+	fi
+}
+
+choose_save_directory ()
+{
+	if [ -z $SAVE_DIR ]; then
+		SAVE_DIR=$($DIALOG $TITLE --file --directory $FILE_WINDOW_SIZE)
+		check_cancel
+		echo $SAVE_DIR > $HOME/.save_dir
+	fi
+}	
+
+dump_sqlite()
+{
+	echo -e "Tables:\n"
+	sqlite3 "$1" .tables
+	echo
+	for i in $(sqlite3 "$1" .tables); do
+		echo -e "Table: $i\n"
+		sqlite3 -header $1 "select * from $i"
+		echo -e "\n\n"
+	done
+}
+
+read_yad_output ()
+{
+	## Read user input
+	for var in $2; do
+		eval $var="\${$1%%|*}"
+		$1="${$1#*|}"
+	done
+}
