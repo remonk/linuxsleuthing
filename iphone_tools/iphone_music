@@ -111,7 +111,7 @@ echo "Searching $path for files..." >&2
 
 if [ $itunes = 1 ]
 then
-	find "$path" -type f -name "*.m4[pv]" |
+	find "$path" -type f -name "*.m4[apv]" |
 		while read i; do
 			get_meta
 		done
